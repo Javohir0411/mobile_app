@@ -1,8 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Text, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Text, Float, column
+from app.enum import ItemConditionEnum, ItemImeiEnum, UserGenderEnum
 from sqlalchemy.orm import relationship
-from app.enum import ItemConditionEnum, ItemImeiEnum
-
-from .session import Base
+from .base import Base
 
 
 class Category(Base):
@@ -37,6 +36,7 @@ class ShopInfo(Base):
 class Item(Base):
     __tablename__ = "item"
 
+    id = Column(Integer, primary_key=True)
     item_category_id = Column(Integer, ForeignKey("category.id"))
     item_category = relationship("Category")
     item_brand_id = Column(Integer, ForeignKey("brand.id"))
@@ -59,3 +59,16 @@ class Item(Base):
     shop_info = relationship("ShopInfo")  # Do'kon egasi ma'lumotlari modelidan ma'lumot olish
     customer_info = Column(Text)  # Mahsulotni do'kondan sotib olgan inson ma'lumotlari
     previous_owner_info = Column(Text)  # Mahsulotni do'konga sotib ketgan inson ma'lumotlari
+
+
+class User(Base):
+    __tablename__ = "user"
+
+    id = Column(Integer, primary_key=True)
+    user_firstname = Column(String, nullable=False)
+    user_lastname = Column(String, nullable=False)
+    username = Column(String, nullable=False, unique=True, index=True)  # Username sifatida email kiritilishi kerak !!!
+    user_phone_number = Column(String, nullable=False, unique=True)
+    user_password = Column(String, nullable=False)
+    user_image = Column(String)
+    user_gender = Column(Enum(UserGenderEnum))

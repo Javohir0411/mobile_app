@@ -9,3 +9,8 @@ class ItemConditionEnum(Enum):
 class ItemImeiEnum(Enum):
     REGISTERED = "registered"
     UNREGISTERED = "unregistered"
+
+class UserGenderEnum(Enum):
+    MALE = "male"
+    FEMALE = "female"
+    OTHER = "other"
