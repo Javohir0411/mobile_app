@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Text, Float, column
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Text, Float, DateTime, func
 from app.enum import ItemConditionEnum, ItemImeiEnum, UserGenderEnum
 from sqlalchemy.orm import relationship
 from .base import Base
@@ -10,13 +10,18 @@ class Category(Base):
     id = Column(Integer, primary_key=True)
     category_name_uz = Column(String, nullable=False)
     category_name_ru = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
+                        onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
 
 
 class Brand(Base):
     __tablename__ = "brand"
-
     id = Column(Integer, primary_key=True)
     brand_name = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
+                        onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
 
 
 class Model(Base):
@@ -24,6 +29,9 @@ class Model(Base):
 
     id = Column(Integer, primary_key=True)
     model_name = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
+                        onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
 
 
 class ShopInfo(Base):
@@ -31,6 +39,9 @@ class ShopInfo(Base):
 
     id = Column(Integer, primary_key=True)
     seller_inn_number = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
+                        onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
 
 
 class Item(Base):
@@ -59,6 +70,9 @@ class Item(Base):
     shop_info = relationship("ShopInfo")  # Do'kon egasi ma'lumotlari modelidan ma'lumot olish
     customer_info = Column(Text)  # Mahsulotni do'kondan sotib olgan inson ma'lumotlari
     previous_owner_info = Column(Text)  # Mahsulotni do'konga sotib ketgan inson ma'lumotlari
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
+                        onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
 
 
 class User(Base):
@@ -72,3 +86,6 @@ class User(Base):
     user_password = Column(String, nullable=False)
     user_image = Column(String)
     user_gender = Column(Enum(UserGenderEnum))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
+                        onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
