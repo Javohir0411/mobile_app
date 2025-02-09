@@ -1,5 +1,17 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Text, Float, DateTime, func
-from app.enum import ItemConditionEnum, ItemImeiEnum, UserGenderEnum
+from sqlalchemy import (Column,
+                        Integer,
+                        String,
+                        ForeignKey,
+                        Enum,
+                        Text,
+                        Float,
+                        DateTime,
+                        func
+                        )
+from app.enum import (ItemConditionEnum,
+                      ItemImeiEnum,
+                      UserGenderEnum
+                      )
 from sqlalchemy.orm import relationship
 from .base import Base
 
@@ -54,7 +66,7 @@ class Item(Base):
     item_brand = relationship("Brand")
     item_model_id = Column(Integer, ForeignKey("model.id"))
     item_model = relationship("Model")
-    item_color = Column(String(50))
+    item_color = Column(String(50), nullable=False)
     item_ram = Column(Integer)
     item_is_new = Column(Enum(ItemConditionEnum))
     item_description = Column(Text)
