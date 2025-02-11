@@ -6,12 +6,10 @@ from sqlalchemy import (Column,
                         Text,
                         Float,
                         DateTime,
-                        func
-                        )
+                        func)
 from app.enum import (ItemConditionEnum,
                       ItemImeiEnum,
-                      UserGenderEnum
-                      )
+                      UserGenderEnum)
 from sqlalchemy.orm import relationship
 from .base import Base
 

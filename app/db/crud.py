@@ -1,3 +1,4 @@
+from app.core.utils import get_translated_field
 from app.db.schemas import (UserBase,
                             UserUpdate,
                             ItemBase,
@@ -18,21 +19,31 @@ from fastapi import HTTPException
 # Category model
 # Create - Yangi category qo'shish
 def create_category(db: Session, category_name_uz: str, category_name_ru: str):
-    product = Category(category_name_uz=category_name_uz, category_name_ru=category_name_ru)
-    db.add(product)
+    category = Category(category_name_uz=category_name_uz, category_name_ru=category_name_ru)
+    db.add(category)
     db.commit()
-    db.refresh(product)
-    return product
+    db.refresh(category)
+    return category
 
 
 # Read - Barcha mahsulotlarni olish
-def get_categories(db: Session):
-    return db.query(Category).all()
+def get_categories(db: Session, lang: str = "uz"):
+    categories = db.query(Category).all()
+    result = []
+    for cat in categories:
+        name = get_translated_field(cat, lang, "category_name")
+        result.append({"id": cat.id, "category_name": name})
+    return result
 
 
 # ID bo'yicha qidirilgan kategoriyani olamiz
-def get_category(db: Session, category_id: int):
-    return db.query(Category).filter(Category.id == category_id).first()
+def get_category(db: Session, category_id: int, lang: str = "uz"):
+    category = db.query(Category).filter(Category.id == category_id).first()
+    if category:
+        return {
+            "id": category.id,
+            "category_name": get_translated_field(category, lang, "category_name")
+        }
 
 
 # ID bo'yicha qidirilgan kategoriyani yangilaymiz
@@ -256,6 +267,7 @@ def update_shop(db: Session, shop_id: int, shop_data: ShopInfoBase):
     db.commit()
     db.refresh(shop)
     return shop
+
 
 # Delete - ID bo'yicha qidirilgan shopni o'chiramiz
 def delete_shop(db: Session, shop_id: int):
