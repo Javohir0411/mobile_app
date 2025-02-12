@@ -86,6 +86,7 @@ def add_brand(brand: BrandBase, db: Session = Depends(get_db)):
 def modify_brand(brand: BrandBase, brand_id: int, db: Session = Depends(get_db)):
     return update_brand(db, brand_id, brand.brand_name)
 
+
 @router.delete("/brands/{brand_id")
 def remove_brand(brand_id: int, db: Session = Depends(get_db)):
     return delete_brand(db, brand_id)
@@ -96,22 +97,24 @@ def remove_brand(brand_id: int, db: Session = Depends(get_db)):
 def read_models(db: Session = Depends(get_db)):
     return get_models(db)
 
+
 @router.get("/models/{model_id}")
 def read_model(model_id: int, db: Session = Depends(get_db)):
     return get_model(db, model_id)
+
 
 @router.post("/models")
 def add_model(model: ModelBase, db: Session = Depends(get_db)):
     return create_model(db, model.model_name)
 
+
 @router.put("/models/{model_id}")
 def modify_model(model: ModelBase, model_id: int, db: Session = Depends(get_db)):
     return update_model(db, model_id, model.model_name)
 
+
 @router.delete("/models/{model_id}")
 def remove_model(model_id: int, db: Session = Depends(get_db)):
     return delete_model(db, model_id)
-
-
 
 # - - - - - - - - - ShopInfo - - - - - - - - -
