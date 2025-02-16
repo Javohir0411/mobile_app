@@ -1,19 +1,18 @@
-import os
-
-from dotenv import load_dotenv
 from fastapi import FastAPI
-from app.api.v1 import routes_products, routes_sales
-from app.db.session import get_db
+from app.api.v1.routes_products import router as product_router
+import uvicorn
 
-app = FastAPI()
+app = FastAPI(title="My Project API", version="1.0")
 
-# Mahsulotlar API marshrutlarini ro'yxatdan o'tkazish
-app.include_router(routes_products.router)
+# Barcha mahsulot marshrutlarini bitta router orqali ulash
+app.include_router(product_router, prefix="/api/v1",
+                   tags=["Products", "Brands", "Models", "Shops", "Items", "INNs", "Users"])
 
-app.include_router(routes_sales.router)
 
-
+@app.get("/")
 def read_root():
-    connection = get_db()  # Ma'lumotlar bazasiga ulanish
-    # Burada boshqa ma'lumotlar olish yoki qo'shimcha ishlar qilish mumkin
-    return {"message": "Connected to DB!"}
+    return {"message": "Welcome to My Project API"}
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

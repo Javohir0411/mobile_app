@@ -3,14 +3,14 @@ from app.db.schemas import (UserBase,
                             UserUpdate,
                             ItemBase,
                             ItemUpdate,
-                            ShopInfoBase
+                            ShopInfoBase, InputInnNumberBase
                             )
 from app.db.models import (Category,
                            Brand,
                            Model,
                            Item,
                            User,
-                           ShopInfo
+                           ShopInfo, InputInnNumber
                            )
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
@@ -279,3 +279,41 @@ def delete_shop(db: Session, shop_id: int):
     db.commit()
     db.refresh(shop)
     return shop
+
+# InputInnNumber model uchun create
+def create_inn_number(db:Session, inn_data: InputInnNumberBase):
+    inn_number = InputInnNumber(**inn_data.model_dump(exclude_unset=True))
+    db.add(inn_number)
+    db.commit()
+    db.refresh(inn_number)
+    return inn_number
+
+# Read - Barcha ma'lumotlarni o'qish
+def get_inn_numbers(db: Session):
+    return db.query(InputInnNumber).all()
+
+# ID bo'yicha qidirilgan INN raqamlarni olish
+def get_inn_number(db: Session, inn_id: int):
+    return db.query(InputInnNumber).filter(InputInnNumber.id == inn_id).first()
+
+# Update - ID bo'yicha qidirilgan INN raqamni yangilash
+def update_inn_number(db: Session, inn_id: int, inn_data: InputInnNumberBase):
+    inn_number = db.query(InputInnNumber).filter(InputInnNumber.id == inn_id).first()
+
+    if not inn_number:
+        raise HTTPException(status_code=404, detail="Inn number not found")
+
+    for key, value in inn_data.model_dump(exclude_unset=True).items():
+        setattr(inn_number, key, value)
+
+# Delete - ID bo'yicha qidirilgan Inn raqamni o'chirish
+def delete_inn_number(db: Session, inn_id: int):
+    inn_number = db.query(InputInnNumber).filter(InputInnNumber.id == inn_id).first()
+
+    if not inn_number:
+        raise HTTPException(status_code=404, detail="Inn number not found")
+
+    db.delete(inn_number)
+    db.commit()
+    db.refresh(inn_number)
+    return inn_number

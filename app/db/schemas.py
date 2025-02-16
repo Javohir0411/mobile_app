@@ -4,7 +4,7 @@ from app.enum import (ItemConditionEnum,
                       )
 from pydantic import BaseModel, HttpUrl
 
-from typing import Optional
+from typing import Optional, List
 
 
 # Pydantic model - kelayotgan ma'lumotlarni tekshirib olish olish
@@ -22,7 +22,7 @@ class ModelBase(BaseModel):
     model_name: str
 
 
-class ShopInfoBase(BaseModel):
+class InputInnNumberBase(BaseModel):
     seller_inn_number: int
 
 
@@ -88,3 +88,18 @@ class UserUpdate(BaseModel):
     user_password: Optional[str] = None
     user_image: Optional[HttpUrl] = None
     user_gender: Optional[UserGenderEnum] = None
+
+class ShopInfoBase(BaseModel):
+    register_date: Optional[str] = None
+    org_status: Optional[str] = None
+    registration_authority: Optional[str] = None
+    inn_number: Optional[int] = None
+    thsht_info: Optional[str] = None
+    dbibt_info: Optional[str] = None
+    ifut_info: Optional[str] = None
+    authorized_fund: Optional[float] = None
+    org_email: Optional[str] = None
+    org_phone_number: Optional[str] = None
+    company_name: Optional[str] = None
+    company_address: Optional[str] = None
+    founders:  Optional[List[str]] = None

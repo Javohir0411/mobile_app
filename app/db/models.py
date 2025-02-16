@@ -6,7 +6,7 @@ from sqlalchemy import (Column,
                         Text,
                         Float,
                         DateTime,
-                        func)
+                        func, ARRAY)
 from app.enum import (ItemConditionEnum,
                       ItemImeiEnum,
                       UserGenderEnum)
@@ -44,8 +44,8 @@ class Model(Base):
                         onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
 
 
-class ShopInfo(Base):
-    __tablename__ = "shop_info"
+class InputInnNumber(Base):
+    __tablename__ = "input_inn_number"
 
     id = Column(Integer, primary_key=True)
     seller_inn_number = Column(String, nullable=False)
@@ -76,7 +76,7 @@ class Item(Base):
     item_purchased_price = Column(Float, nullable=False)
     item_selling_price = Column(Float)
     item_quantity = Column(Integer)
-    shop_info_id = Column(Integer, ForeignKey("shop_info.id"))  # Do'kon egasini ma'lumotlari modeliga ulanish
+    shop_info_id = Column(Integer, ForeignKey("shop_info.id"))  # Do'kon egasini ma'lumotlari modeling ulanish
     shop_info = relationship("ShopInfo")  # Do'kon egasi ma'lumotlari modelidan ma'lumot olish
     customer_info = Column(Text)  # Mahsulotni do'kondan sotib olgan inson ma'lumotlari
     previous_owner_info = Column(Text)  # Mahsulotni do'konga sotib ketgan inson ma'lumotlari
@@ -99,3 +99,21 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
     updated_at = Column(DateTime(timezone=True), server_default=func.now(),
                         onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
+
+class ShopInfo(Base):
+    __tablename__ = "shop_info"
+
+    id = Column(Integer, primary_key=True)
+    register_date = Column(String)
+    org_status = Column(String)
+    registration_authority = Column(String)
+    inn_number = Column(Integer)
+    thsht_info = Column(String)
+    dbibt_info = Column(String)
+    ifut_info = Column(String)
+    authorized_fund = Column(Float)
+    org_email = Column(String)
+    org_phone_number = Column(String)
+    company_name = Column(String)
+    company_address = Column(String)
+    founders =  Column(ARRAY(String))
