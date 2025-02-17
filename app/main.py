@@ -6,12 +6,12 @@ app = FastAPI(title="My Project API", version="1.0")
 
 # Barcha mahsulot marshrutlarini bitta router orqali ulash
 app.include_router(product_router, prefix="/api/v1",
-                   tags=["Products", "Brands", "Models", "Shops", "Items", "INNs", "Users"])
+                   tags=["Endpoints"])
 
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to My Project API"}
+    return {"message": "Swagger dokumentatsiya: http://127.0.0.1:8000/docs"}
 
 
 if __name__ == "__main__":

@@ -48,7 +48,7 @@ class InputInnNumber(Base):
     __tablename__ = "input_inn_number"
 
     id = Column(Integer, primary_key=True)
-    seller_inn_number = Column(String, nullable=False)
+    inn_number = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
     updated_at = Column(DateTime(timezone=True), server_default=func.now(),
                         onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
@@ -100,20 +100,21 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(),
                         onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
 
+
 class ShopInfo(Base):
     __tablename__ = "shop_info"
 
     id = Column(Integer, primary_key=True)
-    register_date = Column(String)
-    org_status = Column(String)
-    registration_authority = Column(String)
+    register_date = Column(String, nullable=True)
+    org_status = Column(String, nullable=True)
+    registration_authority = Column(String, nullable=True)
     inn_number = Column(Integer)
-    thsht_info = Column(String)
-    dbibt_info = Column(String)
-    ifut_info = Column(String)
+    thsht_info = Column(String, nullable=True)
+    dbibt_info = Column(String, nullable=True)
+    ifut_info = Column(String, nullable=True)
     authorized_fund = Column(Float)
-    org_email = Column(String)
-    org_phone_number = Column(String)
-    company_name = Column(String)
-    company_address = Column(String)
-    founders =  Column(ARRAY(String))
+    org_email = Column(String, nullable=True)
+    org_phone_number = Column(String, nullable=True)
+    company_name = Column(String, nullable=True)
+    company_address = Column(String, nullable=True)
+    founders = Column(ARRAY(String))

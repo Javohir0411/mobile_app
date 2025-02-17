@@ -1,19 +1,14 @@
 import re
 import requests
 from bs4 import BeautifulSoup
-from urllib.request import Request, urlopen
+from app.db.schemas import ShopInfoBase
 
 
 def get_translated_field(obj, lang: str, field_base_name: str):
-    # Ma'lumotlar obyektining tilga bog‘liq maydonini qaytarish
-    field_name = f"{field_base_name}_{lang}"  # Masalas: "category_name_uz" yoki "category_name_ru"
-    return getattr(obj, field_name, None)  # Agar maydon bo‘lmasa, None qaytaradi
+    field_name = f"{field_base_name}_{lang}"
+    return getattr(obj, field_name, None)
 
 
-"""
-headers - bu so‘rov bilan birga yuboriladigan qo‘shimcha ma'lumotlar.
-Veb-server ular orqali kim, qayerdan va qaysi dastur orqali so‘rov yuborilganini biladi.
-"""
 headers = {
     "user-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64, x64)"
                   " AppleWebKit/537.36 (KHTML, like Gecko)"
@@ -25,7 +20,6 @@ headers = {
 }
 
 
-# Saytga so'rov yuborish
 def send_request(inn: int):
     base_url = f"https://orginfo.uz/search?q={inn}"
     response = requests.get(base_url, headers=headers)
@@ -41,25 +35,18 @@ def send_request(inn: int):
         raise Exception("Ma'lumot olishda xatolik yuz berdi !")
 
 
-# Tashkilot nomini HTMl kodlar orasidan ajratib olish
 def get_company_name(soup):
-    org_name_tag = soup.find("h6")  # Nomi joylashgan html tegni qidirish
-    if org_name_tag:
-        return org_name_tag.text.strip()
-    else:
-        return "Tashkilot topilmadi !"
+    org_name_tag = soup.find("h6")
+    return org_name_tag.text.strip() if org_name_tag else "Tashkilot topilmadi !"
 
 
-# Tashkilot manzilini HTMl kodlar orasidan ajratib olish
 def get_location(soup):
-    location_tag = soup.find("p", class_="text-body-tertiary")  # Manzili joylashgan html tegni qidirish
+    location_tag = soup.find("p", class_="text-body-tertiary")
     if location_tag:
-        address = re.sub(r"\s+", " ", location_tag.text.replace('location', '').strip())
-        return address
+        return re.sub(r"\s+", " ", location_tag.text.replace('location', '').strip())
     return "Address-ni olib bo'lmadi !"
 
 
-# Tashkilot ta'sischi(rahbar)larini ismini olish
 def get_founders(org_url):
     response = requests.get(org_url, headers=headers)
     if response.status_code == 200:
@@ -69,18 +56,15 @@ def get_founders(org_url):
     return ["URL ochilmadi"]
 
 
-# Ustavi fondni olish
 def get_authorized_fund(organization_page_ur):
     response = requests.get(organization_page_ur, headers=headers)
     soup = BeautifulSoup(response.text, 'html.parser')
     auth_fund = soup.find_all("span", class_="bg-success bg-opacity-10 text-success px-2 py-1 rounded-3")
     if len(auth_fund) > 1:
-        cleaned_data = re.sub(r"\s+", " ", auth_fund[1].text.strip())
-        return cleaned_data
+        return re.sub(r"\s+", " ", auth_fund[1].text.strip())
     return "Ustav fondi topilmadi !"
 
 
-# Ro'yxatdan o'tgan kunni topish!
 def get_register_date(soup):
     reg_str_tag = soup.find_all("span", string="Дата регистрации")
     if reg_str_tag:
@@ -88,29 +72,22 @@ def get_register_date(soup):
             register_date = tag.find_parent("div").find_next_sibling("div").find("span").text.strip()
             if register_date:
                 return register_date
-            return "Ro'yxatdan o'tilgan sana topilmadi !"
-    return "Дата регистрации tegini topishni iloi bo'lmadi"
+    return "Ro'yxatdan o'tilgan sana topilmadi !"
 
 
-# Tashkilot holati haqida
 def get_org_status(soup):
     org_status_tag = soup.find("span", string="Статус")
     if org_status_tag:
-        parent_div = org_status_tag.find_parent("div")  # find_next_sibling("div").find("span").text.strip()
+        parent_div = org_status_tag.find_parent("div")
         if parent_div:
             next_sibling = parent_div.find_next_sibling("div")
             if next_sibling:
                 span_tag = next_sibling.find("span")
                 if span_tag:
-                    status = span_tag.text.strip()
-                    return status
-                return "Span tegi topilmadi"
-            return "Next sibling tegi topilmadi"
-        return "Parent div tegi topilmadi"
-    return "Статус tag topilmadi"
+                    return span_tag.text.strip()
+    return "Holat topilmadi"
 
 
-# Kim tomonidan ro'yxatga olingani
 def get_registration_authority(soup):
     registration_authority = soup.find("span", string="Регистрирующий орган")
     if registration_authority:
@@ -120,12 +97,8 @@ def get_registration_authority(soup):
             if next_sibling:
                 span_tag = next_sibling.find('span')
                 if span_tag:
-                    result = span_tag.text.strip()
-                    return result
-                return "Span tegi topilmadi !"
-            return "Next sibling topilmadi"
-        return "Parent div topilmadi"
-    return "Регистрирующий орган topilmadi "
+                    return span_tag.text.strip()
+    return "Ro'yxatga olish organi topilmadi"
 
 
 def get_thsht_info(soup):
@@ -137,12 +110,8 @@ def get_thsht_info(soup):
             if next_sibling:
                 span_tag = next_sibling.find('span')
                 if span_tag:
-                    cleaned_data = re.sub(r"\s+", " ", span_tag.text.strip())
-                    return cleaned_data
-                return "Span tegi topilmadi !"
-            return "Next sibling topilmadi"
-        return "Parent div topilmadi"
-    return "THSHT(ОПФ) topilmadi "
+                    return re.sub(r"\s+", " ", span_tag.text.strip())
+    return "THSHT(ОПФ) topilmadi"
 
 
 def get_dbibt_info(soup):
@@ -154,12 +123,8 @@ def get_dbibt_info(soup):
             if next_sibling:
                 span_tag = next_sibling.find('span')
                 if span_tag:
-                    cleaned_data = re.sub(r"\s+", " ", span_tag.text.strip())
-                    return cleaned_data
-                return "Span tegi topilmadi !"
-            return "Next sibling topilmadi"
-        return "Parent div topilmadi"
-    return "DBIBT(СООГУ) topilmadi "
+                    return re.sub(r"\s+", " ", span_tag.text.strip())
+    return "DBIBT(СООГУ) topilmadi"
 
 
 def get_ifut_info(soup):
@@ -171,21 +136,15 @@ def get_ifut_info(soup):
             if next_sibling:
                 span_tag = next_sibling.find('span')
                 if span_tag:
-                    cleaned_data = re.sub(r"\s+", " ", span_tag.text.strip())
-                    return cleaned_data
-                return "Span tegi topilmadi !"
-            return "Next sibling topilmadi"
-        return "Parent div topilmadi"
-    return "IFUT(ОКЭД) topilmadi "
+                    return re.sub(r"\s+", " ", span_tag.text.strip())
+    return "IFUT(ОКЭД) topilmadi"
 
 
-# Emailni olish
 def extract_email_from_html(soup):
     email_tag = soup.find("a", class_="__cf_email__")
     if email_tag:
         cfemail = email_tag.get("data-cfemail")
         if cfemail:
-            # Cloudflare emailni dekod qilish
             hex_data = bytes.fromhex(cfemail)
             key = hex_data[0]
             decoded_chars = [chr(b ^ key) for b in hex_data[1:]]
@@ -193,17 +152,32 @@ def extract_email_from_html(soup):
     return "Email topilmadi"
 
 
-# STIRni olish
 def get_inn_number(inn: int):
     return inn
 
 
-# Telefon nomerini olish
 def get_phone_number(soup):
     phone_number_tag = soup.find('a', class_='text-decoration-none text-body-hover text-success')
     if phone_number_tag:
-        cleaned_data = phone_number_tag.find("span").text.strip()
-        return cleaned_data
-    else:
-        return "Telefon raqam tegi topilmadi"
+        return phone_number_tag.find("span").text.strip()
+    return "Telefon raqam topilmadi"
 
+
+def get_shop_info(inn: int) -> ShopInfoBase:
+    soup, org_url, org_soup = send_request(inn)
+    shop_info = ShopInfoBase(
+        register_date=get_register_date(org_soup),
+        org_status=get_org_status(org_soup),
+        registration_authority=get_registration_authority(org_soup),
+        inn_number=inn,
+        thsht_info=get_thsht_info(org_soup),
+        dbibt_info=get_dbibt_info(org_soup),
+        ifut_info=get_ifut_info(org_soup),
+        authorized_fund=get_authorized_fund(org_url),
+        org_email=extract_email_from_html(org_soup),
+        org_phone_number=get_phone_number(org_soup),
+        company_name=get_company_name(soup),
+        company_address=get_location(soup),
+        founders=get_founders(org_url)
+    )
+    return shop_info

@@ -93,7 +93,7 @@ def modify_brand(brand: BrandBase, brand_id: int, db: Session = Depends(get_db))
     return update_brand(db, brand_id, brand.brand_name)
 
 
-@router.delete("/brands/{brand_id")
+@router.delete("/brands/{brand_id}")
 def remove_brand(brand_id: int, db: Session = Depends(get_db)):
     return delete_brand(db, brand_id)
 
