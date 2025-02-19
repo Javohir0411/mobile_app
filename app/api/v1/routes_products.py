@@ -142,7 +142,7 @@ def add_shop(shop: ShopInfoBase, db: Session = Depends(get_db)):
 
 
 @router.put("/shop/{shop_id}")
-def modify_shop(shop_id: int, shop: ShopInfoBase, db: Session = Depends(get_db)):
+def modify_shop(shop_id: int, shop: ShopInfoBase , db: Session = Depends(get_db)):
     return update_shop(db, shop_id, shop)
 
 
@@ -219,7 +219,7 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
 
 @router.post("/users")
 def add_user(user: UserBase, db: Session = Depends(get_db)):
-    return create_user(db, user)
+        return create_user(db, user)
 
 
 @router.put("/users/{user_id}")

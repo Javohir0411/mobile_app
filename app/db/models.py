@@ -48,7 +48,7 @@ class InputInnNumber(Base):
     __tablename__ = "input_inn_number"
 
     id = Column(Integer, primary_key=True)
-    inn_number = Column(String, nullable=False)
+    org_inn_number = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
     updated_at = Column(DateTime(timezone=True), server_default=func.now(),
                         onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash

@@ -148,12 +148,12 @@ def delete_model(db: Session, model_id: int):
 
 # User model
 # Create - yangi model qo'shish
-def create_user(user: UserBase, db: Session):
-    db_item = User(**user.model_dump())
-    db.add(db_item)
+def create_user(db: Session, user: UserBase, ):
+    db_user = User(**user.model_dump())
+    db.add(db_user)
     db.commit()
-    db.refresh(db_item)
-    return db_item
+    db.refresh(db_user)
+    return db_user
 
 
 # Read - Barcha ma'lumotlarni o'qish
@@ -196,7 +196,7 @@ def delete_user(user_id: int, db: Session):
 # Item model
 # Create - Yangi mahsulot qo'shish
 def create_items(db: Session, items: ItemBase):
-    db_item = Item(**items.model_dump())
+    db_item = Item(**items.dict())
     db.add(db_item)
     db.commit()
     db.refresh(db_item)
@@ -238,7 +238,7 @@ def delete_item(db: Session, item_id: int):
 # ShopInfo model
 # Create - Yangi do'kon qo'shish
 def create_shop(db: Session, shop_data: ShopInfoBase):
-    shop = ShopInfo(**shop_data.model_dump(exclude_unset=True))
+    shop = ShopInfo(**shop_data.dict(exclude_unset=True))
     db.add(shop)
     db.commit()
     db.refresh(shop)
@@ -261,7 +261,7 @@ def update_shop(db: Session, shop_id: int, shop_data: ShopInfoBase):
     if not shop:
         raise HTTPException(status_code=404, detail="Shop not found")
 
-    for key, value in shop_data.model_dump(exclude_unset=True).items():
+    for key, value in shop_data.dict(exclude_unset=True).items():
         setattr(shop, key, value)
 
     db.commit()
@@ -280,21 +280,25 @@ def delete_shop(db: Session, shop_id: int):
     db.refresh(shop)
     return shop
 
+
 # InputInnNumber model uchun create
-def create_inn_number(db:Session, inn_data: InputInnNumberBase):
-    inn_number = InputInnNumber(**inn_data.model_dump(exclude_unset=True))
+def create_inn_number(db: Session, inn_data: InputInnNumberBase):
+    inn_number = InputInnNumber(**inn_data.dict(exclude_unset=True))
     db.add(inn_number)
     db.commit()
     db.refresh(inn_number)
     return inn_number
 
+
 # Read - Barcha ma'lumotlarni o'qish
 def get_inn_numbers(db: Session):
     return db.query(InputInnNumber).all()
 
+
 # ID bo'yicha qidirilgan INN raqamlarni olish
 def get_inn_number(db: Session, inn_id: int):
     return db.query(InputInnNumber).filter(InputInnNumber.id == inn_id).first()
+
 
 # Update - ID bo'yicha qidirilgan INN raqamni yangilash
 def update_inn_number(db: Session, inn_id: int, inn_data: InputInnNumberBase):
@@ -303,8 +307,9 @@ def update_inn_number(db: Session, inn_id: int, inn_data: InputInnNumberBase):
     if not inn_number:
         raise HTTPException(status_code=404, detail="Inn number not found")
 
-    for key, value in inn_data.model_dump(exclude_unset=True).items():
+    for key, value in inn_data.dictcls(exclude_unset=True).items():
         setattr(inn_number, key, value)
+
 
 # Delete - ID bo'yicha qidirilgan Inn raqamni o'chirish
 def delete_inn_number(db: Session, inn_id: int):

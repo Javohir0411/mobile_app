@@ -3,7 +3,7 @@ from app.enum import (ItemConditionEnum,
                       UserGenderEnum
                       )
 from pydantic import BaseModel, HttpUrl
-
+from pydantic import EmailStr
 from typing import Optional, List
 
 
@@ -23,7 +23,7 @@ class ModelBase(BaseModel):
 
 
 class InputInnNumberBase(BaseModel):
-    seller_inn_number: int
+    org_inn_number: int
 
 
 class ItemBase(BaseModel):
@@ -43,8 +43,7 @@ class ItemBase(BaseModel):
     item_quantity: int
     shop_info_id: int
     customer_info: str
-
-    previous_owner: str
+    previous_owner_info: str
 
 
 # Itemni  update qilish uchun
@@ -65,17 +64,16 @@ class ItemUpdate(BaseModel):
     item_quantity: Optional[int] = None
     shop_info_id: Optional[int] = None
     customer_info: Optional[str] = None
-    previous_owner: Optional[str] = None
+    previous_owner_info: Optional[str] = None
 
 
 class UserBase(BaseModel):
     user_firstname: str
     user_lastname: str
-    user_lastname: str
-    username: str  # Username sifatida email kiritilishi kerak !!!
+    username: EmailStr  # Username sifatida email kiritilishi kerak !!!
     user_phone_number: str
     user_password: str
-    user_image: Optional[HttpUrl] = None
+    user_image: Optional[str] = None
     user_gender: UserGenderEnum
 
 
@@ -88,6 +86,7 @@ class UserUpdate(BaseModel):
     user_password: Optional[str] = None
     user_image: Optional[HttpUrl] = None
     user_gender: Optional[UserGenderEnum] = None
+
 
 class ShopInfoBase(BaseModel):
     register_date: Optional[str] = None
@@ -102,4 +101,4 @@ class ShopInfoBase(BaseModel):
     org_phone_number: Optional[str] = None
     company_name: Optional[str] = None
     company_address: Optional[str] = None
-    founders:  Optional[List[str]] = None
+    founders: Optional[List[str]] = None

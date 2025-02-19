@@ -1,3 +1,9 @@
+import argparse
+# import re
+# import requests
+# from bs4 import BeautifulSoup
+# from app.db.schemas import ShopInfoBase  # Agar kerak bo'lsa, o'z ma'lumotlaringizni import qiling
+
 import re
 import requests
 from bs4 import BeautifulSoup
@@ -186,3 +192,15 @@ def get_shop_info(inn: int) -> ShopInfoBase:
         founders=get_founders(org_url)
     )
     return shop_info
+
+
+def main(inn):
+    shop_info = get_shop_info(inn)
+    print(shop_info)  # Natijani konsolga chiqarish
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="INN raqami bo'yicha tashkilot ma'lumotlarini olish")
+    parser.add_argument("inn", type=int, help="INN raqami")
+    args = parser.parse_args()
+    main(args.inn)
