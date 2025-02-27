@@ -44,16 +44,6 @@ class Model(Base):
                         onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
 
 
-class InputInnNumber(Base):
-    __tablename__ = "input_inn_number"
-
-    id = Column(Integer, primary_key=True)
-    org_inn_number = Column(String, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
-                        onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
-
-
 class Item(Base):
     __tablename__ = "item"
 
@@ -91,14 +81,13 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     user_firstname = Column(String, nullable=False)
     user_lastname = Column(String, nullable=False)
-    username = Column(String, nullable=False, unique=True, index=True)  # Username sifatida email kiritilishi kerak !!!
+    user_email = Column(String, nullable=False, unique=True, index=True)  # Username sifatida email kiritilishi kerak !!!
     user_phone_number = Column(String, nullable=False, unique=True)
     user_password = Column(String, nullable=False)
     user_image = Column(String)
     user_gender = Column(Enum(UserGenderEnum))
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
-                        onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
 
 
 class ShopInfo(Base):

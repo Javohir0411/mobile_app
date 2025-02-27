@@ -1,16 +1,18 @@
+from typing import List
+
 from app.core.utils import get_translated_field
 from app.db.schemas import (UserBase,
                             UserUpdate,
                             ItemBase,
                             ItemUpdate,
-                            ShopInfoBase, InputInnNumberBase
+                            ShopInfoBase, InputInnNumberBase, UserRead
                             )
 from app.db.models import (Category,
                            Brand,
                            Model,
                            Item,
                            User,
-                           ShopInfo, InputInnNumber
+                           ShopInfo
                            )
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
@@ -102,7 +104,6 @@ def delete_brand(db: Session, brand_id: int):
     if brand:
         db.delete(brand)
         db.commit()
-        db.refresh(brand)
     return brand
 
 
@@ -142,7 +143,6 @@ def delete_model(db: Session, model_id: int):
     if model:
         db.delete(model)
         db.commit()
-        db.refresh(model)
     return model
 
 
@@ -157,7 +157,7 @@ def create_user(db: Session, user: UserBase, ):
 
 
 # Read - Barcha ma'lumotlarni o'qish
-def get_users(db: Session):
+def get_users(db: Session) -> List[UserRead]:
     return db.query(User).all()
 
 
@@ -166,13 +166,24 @@ def get_user(db: Session, user_id: int):
     return db.query(User).filter(User.id == user_id).first()
 
 
+def get_user_by_email(db: Session, user_email: str):
+    return db.query(User).filter(User.user_email == user_email).first()
+
+
+def get_user_phone_number(db: Session, user_phone_number: str):
+    return db.query(User).filter(User.user_phone_number == user_phone_number)
+
+
 # ID bo'yicha qidirilgan userni yangilash
 def update_user(user_id: int, user: UserUpdate, db: Session):
     user_items = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    for key, value in user.model_dump(exclude_unset=True).items():
+    # Faqat kiritilgan maydonni yangilash
+    update_data = user.model_dump(exclude_unset=True)
+
+    for key, value in update_data.items():
         setattr(user_items, key, value)
 
     db.commit()
@@ -189,7 +200,6 @@ def delete_user(user_id: int, db: Session):
 
     db.delete(user_items)
     db.commit()
-    db.refresh(user_items)
     return user_items
 
 
@@ -226,6 +236,7 @@ def update_item(db: Session, item_id: int, item: ItemUpdate):
     db.refresh(items)
     return items
 
+
 # Delete - ID bo'yicha qidirilgan Itemni o'chiramiz
 def delete_item(db: Session, item_id: int):
     items = db.query(Item).filter(Item.id == item_id).first()
@@ -234,7 +245,6 @@ def delete_item(db: Session, item_id: int):
 
     db.delete(items)
     db.commit()
-    db.refresh(items)
     return items
 
 
@@ -280,51 +290,4 @@ def delete_shop(db: Session, shop_id: int):
 
     db.delete(shop)
     db.commit()
-    db.refresh(shop)
     return shop
-
-
-# InputInnNumber model uchun create
-def create_inn_number(db: Session, inn_data: InputInnNumberBase):
-    inn_number = InputInnNumber(**inn_data.model_dump(exclude_unset=True))
-    db.add(inn_number)
-    db.commit()
-    db.refresh(inn_number)
-    return inn_number
-
-
-# Read - Barcha ma'lumotlarni o'qish
-def get_inn_numbers(db: Session):
-    return db.query(InputInnNumber).all()
-
-
-# ID bo'yicha qidirilgan INN raqamlarni olish
-def get_inn_number(db: Session, inn_id: int):
-    return db.query(InputInnNumber).filter(InputInnNumber.id == inn_id).first()
-
-
-# Update - ID bo'yicha qidirilgan INN raqamni yangilash
-def update_inn_number(db: Session, inn_id: int, inn_data: InputInnNumberBase):
-    inn_number = db.query(InputInnNumber).filter(InputInnNumber.id == inn_id).first()
-
-    if not inn_number:
-        raise HTTPException(status_code=404, detail="Inn number not found")
-
-    for key, value in inn_data.model_dump(exclude_unset=True).items():
-        setattr(inn_number, key, value)
-
-    db.commit()
-    db.refresh(inn_number)
-    return inn_number
-
-# Delete - ID bo'yicha qidirilgan Inn raqamni o'chirish
-def delete_inn_number(db: Session, inn_id: int):
-    inn_number = db.query(InputInnNumber).filter(InputInnNumber.id == inn_id).first()
-
-    if not inn_number:
-        raise HTTPException(status_code=404, detail="Inn number not found")
-
-    db.delete(inn_number)
-    db.commit()
-    db.refresh(inn_number)
-    return inn_number

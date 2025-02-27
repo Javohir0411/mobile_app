@@ -1,12 +1,29 @@
 from fastapi import FastAPI
-from app.api.v1.routes_products import router as product_router
+from app.api.v1.routes_products import (
+    category_router,
+    brand_router,
+    model_router,
+    item_router,
+    shop_router,
+    user_router,
+)
+from app.api.v1.routers_auth import router as auth_router
 import uvicorn
 
 app = FastAPI(title="My Project API", version="1.0")
 
-# Barcha mahsulot marshrutlarini bitta router orqali ulash
-app.include_router(product_router, prefix="/api/v1",
-                   tags=["Endpoints"])
+routers = [
+    (category_router, "Category"),
+    (brand_router, "Brand"),
+    (model_router, "Model"),
+    (item_router, "Item"),
+    (shop_router, "Shop"),
+    (user_router, "User"),
+    (auth_router, "Registration")
+]
+
+for router, tag in routers:
+    app.include_router(router, prefix="/api/v1", tags=[tag])
 
 
 @app.get("/")
