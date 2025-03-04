@@ -19,8 +19,13 @@ def register(user: UserBase, db: Session = Depends(get_db)):
 
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = get_user_by_email(db, user.user_email)
+    # print("DB-dan olingan password:", db_user.user_password)
     if not db_user or not verify_password(user.password, db_user.user_password):
         raise HTTPException(status_code=401, detail="Noto'g'ri username yoki password kiritildi!")
+
+    print("User Password:", user.password)
+    print("DB Password:", db_user.user_password)
+    print("Verify Result:", verify_password(user.password, db_user.user_password))
 
     # JWT token yaratish
     access_token = create_access_token(

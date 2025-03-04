@@ -1,6 +1,8 @@
+from datetime import datetime
+
 from app.enum import (ItemConditionEnum,
                       ItemImeiEnum,
-                      UserGenderEnum
+                      UserGenderEnum, UserRoleEnum
                       )
 from pydantic import BaseModel
 from pydantic import EmailStr
@@ -88,6 +90,12 @@ class UserBase(BaseModel):
     user_password: str
     user_image: Optional[str] = None
     user_gender: UserGenderEnum
+    is_verified: bool
+    role: UserRoleEnum
+    ip_address = str
+    created_at: datetime
+    update_time: datetime
+
 
 class UserRead(BaseModel):
     id: int

@@ -1,11 +1,12 @@
 from typing import List
 
+from app.core.security import hash_password
 from app.core.utils import get_translated_field
 from app.db.schemas import (UserBase,
                             UserUpdate,
                             ItemBase,
                             ItemUpdate,
-                            ShopInfoBase, InputInnNumberBase, UserRead
+                            ShopInfoBase, UserRead
                             )
 from app.db.models import (Category,
                            Brand,
@@ -16,6 +17,8 @@ from app.db.models import (Category,
                            )
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+
+from app.enum import UserRoleEnum
 
 
 # Category model
@@ -148,8 +151,20 @@ def delete_model(db: Session, model_id: int):
 
 # User model
 # Create - yangi model qo'shish
-def create_user(db: Session, user: UserBase, ):
-    db_user = User(**user.model_dump())
+def create_user(db: Session, user: UserBase):
+    hashed_password = hash_password(user.user_password)
+    print(f"hashed_password: {hashed_password}")
+    db_user = User(
+        user_firstname=user.user_firstname,
+        user_lastname=user.user_lastname,
+        user_email=user.user_email,
+        user_phone_number=user.user_phone_number,
+        user_password=hashed_password,
+        user_image=user.user_image,
+        user_gender=user.user_gender
+    )
+    # db_user = User(**user.model_dump())
+    print(f"crud.py 164 db_user: {db_user.user_email}")
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -167,7 +182,9 @@ def get_user(db: Session, user_id: int):
 
 
 def get_user_by_email(db: Session, user_email: str):
-    return db.query(User).filter(User.user_email == user_email).first()
+    user = db.query(User).filter(User.user_email == user_email).first()
+    print("Querydan qaytgan user:", user)
+    return user
 
 
 def get_user_phone_number(db: Session, user_phone_number: str):
@@ -201,6 +218,58 @@ def delete_user(user_id: int, db: Session):
     db.delete(user_items)
     db.commit()
     return user_items
+
+
+# ------------- Guest uchun crud ------------------
+
+# Mehmon foydalanuvchini saqlash
+def create_guest_user(db: Session, ip_address: str):
+    guest_user = User(role=UserRoleEnum.GUEST.value, ip_address=ip_address)
+    db.add(guest_user)
+    db.commit()
+    db.refresh(guest_user)
+    return guest_user
+
+
+# Mehmonni ip manzil orqali olish
+def get_guest_by_ip(db: Session, ip_address: str):
+    return db.query(User).filter(User.ip_address == ip_address, User.role == UserRoleEnum.GUEST.value).first()
+
+
+# Telefon raqam bilan register yoki update qilish
+def register_or_update_user_by_phone(db: Session, user_id: int, user_data: dict):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        for key, value in user_data.items:
+            setattr(user, key, value)
+        user.role = UserRoleEnum.USER.value
+        user.is_verified = True
+        db.commit()
+        db.refresh(user)
+        return user
+
+
+def update_verification_code(db: Session, user_id: int, code: str):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        user.verification_code = code
+        db.commit()
+        db.refresh(user)
+    return user
+
+
+def verify_code(db: Session, user_id: int, code: str):
+    user = db.query(User).filter(User.id == user_id, User.verification_code == code).first()
+    if user:
+        user.is_verified = True
+        user.role = UserRoleEnum.USER.value
+        user.verification_code = None
+        db.commit()
+        db.refresh(user)
+    return user
+
+
+# --------------------------------------------------
 
 
 # Item model

@@ -28,3 +28,10 @@ with open(env_file, "w") as f:
         f.write(f"{key}={value}\n")
 
 print(f"SECRET_KEY yangilandi va .env faylga saqlandi:\n{secret_key}")
+
+# from passlib.context import CryptContext
+#
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+#
+# hashed_password = pwd_context.hash("java0411")
+# print(f"hashed_password: {hashed_password}")

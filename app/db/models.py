@@ -6,10 +6,12 @@ from sqlalchemy import (Column,
                         Text,
                         Float,
                         DateTime,
-                        func, ARRAY)
+                        func,
+                        ARRAY,
+                        Boolean)
 from app.enum import (ItemConditionEnum,
                       ItemImeiEnum,
-                      UserGenderEnum)
+                      UserGenderEnum, UserRoleEnum)
 from sqlalchemy.orm import relationship
 from .base import Base
 
@@ -78,14 +80,18 @@ class Item(Base):
 class User(Base):
     __tablename__ = "user"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
     user_firstname = Column(String, nullable=False)
     user_lastname = Column(String, nullable=False)
     user_email = Column(String, nullable=False, unique=True, index=True)  # Username sifatida email kiritilishi kerak !!!
-    user_phone_number = Column(String, nullable=False, unique=True)
+    user_phone_number = Column(String, nullable=True, unique=True) # ro'yxatdan o'tmaganlar uchun None bo'ladi
     user_password = Column(String, nullable=False)
-    user_image = Column(String)
-    user_gender = Column(Enum(UserGenderEnum))
+    user_image = Column(String, nullable=True)
+    user_gender = Column(Enum(UserGenderEnum), nullable=True)
+    is_verified = Column(Boolean, default=False) # telefon raqam tasdiqlanganmi yoki yo'q
+    role = Column(String, default=UserRoleEnum.GUEST.value) # guest - ro'yxatdan o'tmagan, user - ro'yxatdan o'tgan
+    ip_address = Column(String, nullable=True)
+    verification_code = Column(String, nullable=True) # Tasdiqlash kodi
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
 
