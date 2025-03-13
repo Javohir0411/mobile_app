@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.enum import (ItemConditionEnum,
                       ItemImeiEnum,
@@ -92,19 +92,43 @@ class UserBase(BaseModel):
     user_gender: UserGenderEnum
     is_verified: bool
     role: UserRoleEnum
-    ip_address = str
+    ip_address: str
     created_at: datetime
-    update_time: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UserCreate(BaseModel):
+    user_firstname: str
+    user_lastname: str
+    user_email: EmailStr  # Username sifatida email kiritilishi kerak !!!
+    user_phone_number: str
+    user_password: str
+    user_image: Optional[str] = None
+    user_gender: UserGenderEnum
+    is_verified: bool
+    role: UserRoleEnum
+
+    class Config:
+        from_attributes = True
 
 
 class UserRead(BaseModel):
     id: int
     user_firstname: str
     user_lastname: str
-    user_email: str  # Username sifatida email kiritilishi kerak !!!
-    user_phone_number: str
+    user_email: Optional[str] = None  # Username sifatida email kiritilishi kerak !!!
+    user_phone_number: Optional[str] = None
     user_image: Optional[str] = None
-    user_gender: UserGenderEnum
+    user_gender: Optional[UserGenderEnum] = None
+    role: UserRoleEnum
+    is_verified: Optional[bool] = False
+    ip_address: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
 
 # Foydalanuvchi ma'lumotlarini qaytarish uchun model
 class UserResponse(BaseModel):
@@ -131,6 +155,19 @@ class UserLogin(BaseModel):
     password: str
 
 
+class GuestUserScheme(BaseModel):
+    id: int
+    user_firstname: Optional[str] = None
+    user_lastname: Optional[str] = None
+    ip_address: Optional[str] = None
+    role: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -152,3 +189,11 @@ class ShopInfoBase(BaseModel):
     company_name: Optional[str] = None
     company_address: Optional[str] = None
     founders: Optional[List[str]] = None
+
+
+# - - - - - - - - - VerificationCode model - - - - - - - -
+
+class VerificationCodeBase(BaseModel):
+    email: EmailStr
+    code: str
+    expires_at: datetime = datetime.now() + timedelta(minutes=5)

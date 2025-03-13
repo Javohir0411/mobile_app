@@ -1,27 +1,35 @@
-from typing import List
+import logging
 
-from app.core.security import hash_password
-from app.core.utils import get_translated_field
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 from app.db.schemas import (UserBase,
                             UserUpdate,
                             ItemBase,
                             ItemUpdate,
-                            ShopInfoBase, UserRead
+                            ShopInfoBase,
+                            UserRead,
+                            GuestUserScheme
                             )
+from app.core.utils import get_translated_field
+from app.db.models import User, UserRoleEnum
+from app.core.security import hash_password
+from sqlalchemy.exc import IntegrityError
 from app.db.models import (Category,
                            Brand,
                            Model,
                            Item,
                            User,
-                           ShopInfo
+                           ShopInfo,
+                           VerificationCode
                            )
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
-
 from app.enum import UserRoleEnum
+from typing import List
 
 
-# Category model
+# ------------- Category model ------------
+
 # Create - Yangi category qo'shish
 def create_category(db: Session, category_name_uz: str, category_name_ru: str):
     category = Category(category_name_uz=category_name_uz, category_name_ru=category_name_ru)
@@ -71,7 +79,7 @@ def delete_category(db: Session, category_id: int):
     return category
 
 
-# Brand model
+# --------------- Brand model ---------------
 # Create - yangi model qo'shish
 def create_brand(db: Session, brand_name: str):
     brand = Brand(brand_name=brand_name)
@@ -110,7 +118,8 @@ def delete_brand(db: Session, brand_id: int):
     return brand
 
 
-# Model_name uchun  model
+# ---------------- Model_name -----------------
+
 # Create - yangi model qo'shish
 def create_model(db: Session, model_name: str):
     model = Model(model_name=model_name)
@@ -149,7 +158,8 @@ def delete_model(db: Session, model_id: int):
     return model
 
 
-# User model
+# ----------------- User model ---------------------
+
 # Create - yangi model qo'shish
 def create_user(db: Session, user: UserBase):
     hashed_password = hash_password(user.user_password)
@@ -164,7 +174,7 @@ def create_user(db: Session, user: UserBase):
         user_gender=user.user_gender
     )
     # db_user = User(**user.model_dump())
-    print(f"crud.py 164 db_user: {db_user.user_email}")
+    print(f"crud.py 167 db_user: {db_user.user_email}")
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -173,7 +183,17 @@ def create_user(db: Session, user: UserBase):
 
 # Read - Barcha ma'lumotlarni o'qish
 def get_users(db: Session) -> List[UserRead]:
-    return db.query(User).all()
+    user_data = db.query(User).all()
+    try:
+        if user_data:
+            logger.info(f"User modelidan olingan ma'lumotlar: {user_data} ")
+            return user_data
+
+        raise HTTPException(status_code=500, detail="User modelidan ma'lumot olib bo'lmadi!")
+
+    except Exception as e:
+        logger.info(f"User modelidan ma'lumot olishda xatolik: {e}")
+        raise HTTPException(status_code=500, detail="User modelidan ma'lumot olishda xatolik yoki ma'lumot yo'q hali")
 
 
 # Id bo'yicha qidirilgan userni ko'rish
@@ -223,12 +243,38 @@ def delete_user(user_id: int, db: Session):
 # ------------- Guest uchun crud ------------------
 
 # Mehmon foydalanuvchini saqlash
+# def create_guest_user(db: Session, ip_address: str):
+#     guest_user = User(role=UserRoleEnum.GUEST.value, ip_address=ip_address)
+#     db.add(guest_user)
+#     db.commit()
+#     db.refresh(guest_user)
+#     return guest_user
+
+
 def create_guest_user(db: Session, ip_address: str):
-    guest_user = User(role=UserRoleEnum.GUEST.value, ip_address=ip_address)
-    db.add(guest_user)
-    db.commit()
-    db.refresh(guest_user)
-    return guest_user
+    # IP manzil bo'yicha mehmon foydalanuvchi mavjudligini tekshirish
+    existing_guest = db.query(User).filter_by(ip_address=ip_address, role=UserRoleEnum.GUEST.value).first()
+    if existing_guest:
+        logging.info(f"Mavjud mehmon topildi: {existing_guest}")
+        return GuestUserScheme.model_validate(existing_guest)
+
+    logging.info(f"Mehmon topilmadi, yaratilmoqda...")
+    guest_user = User(
+        user_firstname="Guest",
+        user_lastname="User",
+        role=UserRoleEnum.GUEST.value,
+        ip_address=ip_address
+    )
+    try:
+        db.add(guest_user)
+        db.commit()
+        db.refresh(guest_user)
+        logger.info(f"Guest user bazaga saqlandi: {guest_user}")
+        return guest_user
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"Xatolik: {e}")
+        return None
 
 
 # Mehmonni ip manzil orqali olish
@@ -236,7 +282,7 @@ def get_guest_by_ip(db: Session, ip_address: str):
     return db.query(User).filter(User.ip_address == ip_address, User.role == UserRoleEnum.GUEST.value).first()
 
 
-# Telefon raqam bilan register yoki update qilish
+# Email bilan register yoki update qilish
 def register_or_update_user_by_phone(db: Session, user_id: int, user_data: dict):
     user = db.query(User).filter(User.id == user_id).first()
     if user:
@@ -272,7 +318,8 @@ def verify_code(db: Session, user_id: int, code: str):
 # --------------------------------------------------
 
 
-# Item model
+# --------------- Item model --------------------
+
 # Create - Yangi mahsulot qo'shish
 def create_items(db: Session, items: ItemBase):
     db_item = Item(**items.model_dump())
@@ -317,7 +364,8 @@ def delete_item(db: Session, item_id: int):
     return items
 
 
-# ShopInfo model
+# ----------------- ShopInfo model -------------------
+
 # Create - Yangi do'kon qo'shish
 def create_shop(db: Session, shop_data: ShopInfoBase):
     shop = ShopInfo(**shop_data.model_dump(exclude_unset=True))
@@ -360,3 +408,31 @@ def delete_shop(db: Session, shop_id: int):
     db.delete(shop)
     db.commit()
     return shop
+
+
+# -------------- Verification Code ------------------
+
+# Create - Code-ni yaratish
+def create_verification_code(db: Session, email: str, code: str):
+    expires_at = datetime.utcnow() + timedelta(minutes=5)
+    ver_code = VerificationCode(email=email, code=code, expires_at=expires_at)
+    db.add(ver_code)
+    db.commit()
+    db.refresh(ver_code)
+    return ver_code
+
+
+# Cod-ni tekshirish
+def get_verification_code(db: Session, email: str, code: str):
+    result = db.query(VerificationCode).filter(
+        VerificationCode.email == email,
+        VerificationCode.code == code,
+        VerificationCode.expires_at > datetime.utcnow()
+    ).first()
+    return result
+
+
+# Cod-ni o'chirish
+def delete_verification_code(db: Session, email: str):
+    db.query(VerificationCode).filter(VerificationCode.email == email).delete()
+    db.commit()

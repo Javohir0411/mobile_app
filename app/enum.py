@@ -1,27 +1,27 @@
 from enum import Enum
 
 
-class ItemConditionEnum(Enum):
+class ItemConditionEnum(str, Enum):
     NEW = "new"
     USED = "used"
 
 
-class ItemImeiEnum(Enum):
+class ItemImeiEnum(str, Enum):
     REGISTERED = "registered"
     UNREGISTERED = "unregistered"
 
 
-class UserGenderEnum(Enum):
+class UserGenderEnum(str, Enum):
     MALE = "male"
     FEMALE = "female"
     OTHER = "other"
 
 
-class CurrencyEnum(Enum):
+class CurrencyEnum(str, Enum):
     USD = "usd"
     UZS = "uzs"
 
 
-class UserRoleEnum(Enum):
+class UserRoleEnum(str, Enum):
     GUEST = "guest"
     USER = "user"

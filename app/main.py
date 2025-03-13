@@ -8,6 +8,7 @@ from app.api.v1.routes_products import (
     user_router,
 )
 from app.api.v1.routers_auth import router as auth_router
+from app.api.v1.routers_auth import verify_router
 import uvicorn
 
 app = FastAPI(title="My Project API", version="1.0")
@@ -19,16 +20,25 @@ routers = [
     (item_router, "Item"),
     (shop_router, "Shop"),
     (user_router, "User"),
-    (auth_router, "Registration")
+    (auth_router, "Registration"),
+    (verify_router, "Verification Code")
 ]
 
 for router, tag in routers:
     app.include_router(router, prefix="/api/v1", tags=[tag])
 
+from fastapi import FastAPI, Request
+
+# app = FastAPI()
 
 @app.get("/")
-def read_root():
-    return {"message": "Swagger dokumentatsiya: http://127.0.0.1:8000/docs"}
+def get_ip(request: Request):
+    user_ip = request.client.host
+    return {"Sizning IP manzilingiz": user_ip}
+
+# @app.get("/")
+# def read_root():
+#     return {"message": "Swagger dokumentatsiya: http://127.0.0.1:8000/docs"}
 
 
 if __name__ == "__main__":

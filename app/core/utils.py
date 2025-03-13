@@ -1,7 +1,13 @@
-import re
-import requests
-from bs4 import BeautifulSoup
+from email.mime.multipart import MIMEMultipart  # Email ichidagi matn va fayllarni biriktirish uchun.
 from app.db.schemas import ShopInfoBase
+from email.mime.text import MIMEText  # Email ichidagi matn va fayllarni biriktirish uchun.
+from dotenv import load_dotenv
+from bs4 import BeautifulSoup
+import requests
+import smtplib  # Email jo‘natish uchun kutubxona (SMTP protokoliga asoslangan).
+import random
+import re
+import os
 
 
 def get_translated_field(obj, lang: str, field_base_name: str):
@@ -186,3 +192,46 @@ def get_shop_info(inn: int) -> ShopInfoBase:
         founders=get_founders(org_url)
     )
     return shop_info
+
+
+# ------------- Email yuborish -------------
+
+
+def generate_verify_code():
+    verify_code = str(random.randint(100000, 999999))
+    print(f"generate_verify_code: {verify_code}")
+    return verify_code
+
+load_dotenv()
+
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = os.getenv("EMAIL_PORT")
+EMAIL_USER = os.getenv("EMAIL_USER")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+
+
+def send_email(to_email: str, code: str):
+    # Emailni sarlavhasi va tarkibini tayyorlash
+    message = MIMEMultipart()
+    message["From"] = EMAIL_USER
+    message["To"] = to_email
+    message["Subject"] = "Tasdiqlash kodi"
+
+    # Xabar matnini biriktirish
+    body = f"Sizning tasdiqlash kodingiz: {code}"
+    message.attach(MIMEText(body, "plain"))
+
+    try:
+        # SMTP serverga ulanish va xabarni yuborish
+        server = smtplib.SMTP(EMAIL_HOST, int(EMAIL_PORT))
+        server.starttls()
+        server.login(EMAIL_USER, EMAIL_PASSWORD)
+        server.sendmail(EMAIL_USER, to_email, message.as_string())
+        print(f"Email muvaffaqiyatli yuborildi !")
+    except Exception as e:
+        print(f" Xatolik: {e}")
+
+def send_verify_code(email_address: str):
+    verify_code = generate_verify_code()
+    send_email(email_address, verify_code)
+    return f"Email muvaffaqiyatli yuborildi!: {verify_code}"
