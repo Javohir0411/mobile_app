@@ -88,9 +88,16 @@ def read_brand(brand_id: int, db: Session = Depends(get_db)):
     return get_brand(db, brand_id)
 
 
+# --------- Category-dan foydalanib brandni olish --------
+
+# @brand_router.get("/brands-by-category")
+# def read_brands_by_category(category_id: int, db: Session = Depends(get_db)):
+#     return get_brands_by_category(category_id, db)
+
+
 @brand_router.post("/brands")
 def add_brand(brand: BrandBase, db: Session = Depends(get_db)):
-    return create_brand(db, brand.brand_name)
+    return create_brand(db, brand.brand_name, brand.category_id)
 
 
 @brand_router.put("/brands/{brand_id}")
@@ -113,10 +120,16 @@ def read_models(db: Session = Depends(get_db)):
 def read_model(model_id: int, db: Session = Depends(get_db)):
     return get_model(db, model_id)
 
+# # --------- Brand-dan foydalanib modelni olish --------
+#
+# @model_router.get("/models-by-brands")
+# def read_models_by_brand(brand_id: int, db: Session = Depends(get_db)):
+#     return get_models_by_brand(brand_id, db)
+
 
 @model_router.post("/models")
 def add_model(model: ModelBase, db: Session = Depends(get_db)):
-    return create_model(db, model.model_name)
+    return create_model(db, model.model_name, model.brand_id)
 
 
 @model_router.put("/models/{model_id}")
@@ -150,6 +163,7 @@ def add_shop_by_inn(inn_data: InputInnNumberBase, db: Session = Depends(get_db))
 
     created_shop = create_shop(db, shop_info)
     return {"detail": "Tashkilot saqlandi", "data": created_shop}
+
 
 @shop_router.put("/shop/{shop_id}")
 def modify_shop(shop_id: int, shop: ShopInfoBase, db: Session = Depends(get_db)):

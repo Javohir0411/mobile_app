@@ -1,7 +1,4 @@
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from datetime import datetime, timedelta
 from app.db.schemas import (UserBase,
                             UserUpdate,
                             ItemBase,
@@ -26,6 +23,9 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.enum import UserRoleEnum
 from typing import List
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 # ------------- Category model ------------
@@ -81,8 +81,10 @@ def delete_category(db: Session, category_id: int):
 
 # --------------- Brand model ---------------
 # Create - yangi model qo'shish
-def create_brand(db: Session, brand_name: str):
-    brand = Brand(brand_name=brand_name)
+def create_brand(db: Session, brand_name: str, category_id: int):
+    brand = Brand(
+        brand_name=brand_name,
+        category_id=category_id)
     db.add(brand)
     db.commit()
     db.refresh(brand)
@@ -121,8 +123,11 @@ def delete_brand(db: Session, brand_id: int):
 # ---------------- Model_name -----------------
 
 # Create - yangi model qo'shish
-def create_model(db: Session, model_name: str):
-    model = Model(model_name=model_name)
+def create_model(db: Session, model_name: str, brand_id: int):
+    model = Model(
+        model_name=model_name,
+        brand_id=brand_id
+    )
     db.add(model)
     db.commit()
     db.refresh(model)
@@ -163,6 +168,10 @@ def delete_model(db: Session, model_id: int):
 # Create - yangi model qo'shish
 def create_user(db: Session, user: UserBase):
     hashed_password = hash_password(user.user_password)
+
+    if not hashed_password:
+        raise HTTPException(status_code=500, detail="Parolni hashlashda muammo yuz berdi")
+
     print(f"hashed_password: {hashed_password}")
     db_user = User(
         user_firstname=user.user_firstname,
@@ -208,7 +217,7 @@ def get_user_by_email(db: Session, user_email: str):
 
 
 def get_user_phone_number(db: Session, user_phone_number: str):
-    return db.query(User).filter(User.user_phone_number == user_phone_number)
+    return db.query(User).filter(User.user_phone_number == user_phone_number).first()
 
 
 # ID bo'yicha qidirilgan userni yangilash
@@ -286,7 +295,7 @@ def get_guest_by_ip(db: Session, ip_address: str):
 def register_or_update_user_by_phone(db: Session, user_id: int, user_data: dict):
     user = db.query(User).filter(User.id == user_id).first()
     if user:
-        for key, value in user_data.items:
+        for key, value in user_data.items():
             setattr(user, key, value)
         user.role = UserRoleEnum.USER.value
         user.is_verified = True
@@ -414,7 +423,7 @@ def delete_shop(db: Session, shop_id: int):
 
 # Create - Code-ni yaratish
 def create_verification_code(db: Session, email: str, code: str):
-    expires_at = datetime.utcnow() + timedelta(minutes=5)
+    expires_at = datetime.now() + timedelta(minutes=5)
     ver_code = VerificationCode(email=email, code=code, expires_at=expires_at)
     db.add(ver_code)
     db.commit()
@@ -426,13 +435,44 @@ def create_verification_code(db: Session, email: str, code: str):
 def get_verification_code(db: Session, email: str, code: str):
     result = db.query(VerificationCode).filter(
         VerificationCode.email == email,
-        VerificationCode.code == code,
-        VerificationCode.expires_at > datetime.utcnow()
+        VerificationCode.code == code
     ).first()
     return result
 
 
 # Cod-ni o'chirish
 def delete_verification_code(db: Session, email: str):
-    db.query(VerificationCode).filter(VerificationCode.email == email).delete()
+    db.query(VerificationCode).filter(
+        VerificationCode.email == email
+    ).delete()
     db.commit()
+
+
+# ----------- Create Refresh Token ---------------
+
+def save_refresh_token(db: Session, user_id: int, refresh_token: str):
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        logger.info(f"User topildi, token yaratilmoqda...")
+        user.refresh_token = refresh_token
+        db.commit()
+        db.refresh(user)
+        logger.info(f"Refresh token bazaga yozildi: {user.refresh_token}")
+        return user
+    logger.info("User topilmadi !")
+    return HTTPException(status_code=500, detail="User obyektini olib bo'lmadi")
+
+# def save_refresh_token(db: Session, user_id: int, refresh_token: str):
+#     print(f"🔹 Bazaga refresh token saqlash: {refresh_token}")  # Debug
+#
+#     user = db.query(User).filter(User.id == user_id).first()
+#     if not user:
+#         print("❌ Xato: User topilmadi!")
+#         return HTTPException(status_code=500, detail="User obyektini olib bo'lmadi")
+#
+#     user.refresh_token = refresh_token
+#     db.commit()
+#     db.refresh(user)
+#
+#     print(f"✅ Refresh token bazaga yozildi: {user.refresh_token}")  # Debug
+#     return user

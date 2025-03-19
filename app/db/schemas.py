@@ -22,12 +22,14 @@ class CategoryBase(BaseModel):
 
 class BrandBase(BaseModel):
     brand_name: str
+    category_id: int
 
 
 # - - - - - - - - - ModelBase model - - - - - - - -
 
 class ModelBase(BaseModel):
     model_name: str
+    brand_id: int
 
 
 # - - - - - - - - - InputInnNumberBase model - - - - - - - -
@@ -168,8 +170,13 @@ class GuestUserScheme(BaseModel):
         from_attributes = True
 
 
+class TokenRefreshRequest(BaseModel):
+    refresh_token: str
+
+
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
 
 
@@ -196,4 +203,7 @@ class ShopInfoBase(BaseModel):
 class VerificationCodeBase(BaseModel):
     email: EmailStr
     code: str
-    expires_at: datetime = datetime.now() + timedelta(minutes=5)
+
+
+class SendVerificationCode(BaseModel):
+    email: EmailStr

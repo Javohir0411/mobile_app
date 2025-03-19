@@ -5,10 +5,11 @@ from app.api.v1.routes_products import (
     model_router,
     item_router,
     shop_router,
-    user_router,
+    user_router
 )
 from app.api.v1.routers_auth import router as auth_router
 from app.api.v1.routers_auth import verify_router
+from app.api.v1.routes_dynamic_search import router as dynamic_search
 import uvicorn
 
 app = FastAPI(title="My Project API", version="1.0")
@@ -17,11 +18,12 @@ routers = [
     (category_router, "Category"),
     (brand_router, "Brand"),
     (model_router, "Model"),
-    (item_router, "Item"),
     (shop_router, "Shop"),
+    (item_router, "Item"),
     (user_router, "User"),
     (auth_router, "Registration"),
-    (verify_router, "Verification Code")
+    (verify_router, "Verification Code"),
+    (dynamic_search, "Dynamic Search")
 ]
 
 for router, tag in routers:

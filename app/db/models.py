@@ -32,6 +32,8 @@ class Brand(Base):
     __tablename__ = "brand"
     id = Column(Integer, primary_key=True)
     brand_name = Column(String, nullable=False)
+    category_id = Column(Integer, ForeignKey("category.id", ondelete="CASCADE"))
+    category = relationship("Category", backref="brands", passive_deletes=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
     updated_at = Column(DateTime(timezone=True), server_default=func.now(),
                         onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
@@ -42,6 +44,8 @@ class Model(Base):
 
     id = Column(Integer, primary_key=True)
     model_name = Column(String, nullable=False)
+    brand_id = Column(Integer, ForeignKey("brand.id", ondelete="CASCADE"))
+    brand = relationship("Brand", backref="models", passive_deletes=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
     updated_at = Column(DateTime(timezone=True), server_default=func.now(),
                         onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
@@ -51,12 +55,12 @@ class Item(Base):
     __tablename__ = "item"
 
     id = Column(Integer, primary_key=True)
-    item_category_id = Column(Integer, ForeignKey("category.id"))
-    item_category = relationship("Category")
-    item_brand_id = Column(Integer, ForeignKey("brand.id"))
-    item_brand = relationship("Brand")
-    item_model_id = Column(Integer, ForeignKey("model.id"))
-    item_model = relationship("Model")
+    item_category_id = Column(Integer, ForeignKey("category.id", ondelete="CASCADE"))
+    item_category = relationship("Category", backref="items", passive_deletes=True)
+    item_brand_id = Column(Integer, ForeignKey("brand.id", ondelete="CASCADE"))
+    item_brand = relationship("Brand", backref="items", passive_deletes=True)
+    item_model_id = Column(Integer, ForeignKey("model.id", ondelete="CASCADE"))
+    item_model = relationship("Model", backref="items", passive_deletes=True)
     item_color = Column(String(50), nullable=False)
     item_ram = Column(Integer)
     item_is_new = Column(Enum(ItemConditionEnum))
@@ -87,13 +91,13 @@ class User(Base):
     user_email = Column(String, unique=True, index=True)  # Username sifatida email kiritilishi kerak !!!
     user_phone_number = Column(String, unique=True)  # ro'yxatdan o'tmaganlar uchun None bo'ladi
     user_password = Column(String)
+    refresh_token = Column(String, nullable=True)
     user_image = Column(String)
     user_gender = Column(Enum(UserGenderEnum), default=UserGenderEnum.OTHER)
     is_verified = Column(Boolean, default=False)  # telefon raqam tasdiqlanganmi yoki yo'q
     role = Column(Enum(UserRoleEnum),
                   default=UserRoleEnum.GUEST)  # guest - ro'yxatdan o'tmagan, user - ro'yxatdan o'tgan
     ip_address = Column(String)
-    verification_code = Column(String)  # Tasdiqlash kodi
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
     updated_at = Column(DateTime(timezone=True), server_default=func.now(),
                         onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash

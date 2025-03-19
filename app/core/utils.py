@@ -1,6 +1,7 @@
 from email.mime.multipart import MIMEMultipart  # Email ichidagi matn va fayllarni biriktirish uchun.
 from app.db.schemas import ShopInfoBase
 from email.mime.text import MIMEText  # Email ichidagi matn va fayllarni biriktirish uchun.
+from fastapi import HTTPException
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 import requests
@@ -194,7 +195,7 @@ def get_shop_info(inn: int) -> ShopInfoBase:
     return shop_info
 
 
-# ------------- Email yuborish -------------
+# ------------- Email-ga tasdiqlash kodini yuborish -------------
 
 
 def generate_verify_code():
@@ -206,32 +207,49 @@ load_dotenv()
 
 EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_PORT = os.getenv("EMAIL_PORT")
-EMAIL_USER = os.getenv("EMAIL_USER")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+
+# print(f"EMAIL_HOST: {EMAIL_HOST}")
+# print(f"EMAIL_PORT: {EMAIL_PORT}")
+# print(f"EMAIL_USER: {EMAIL_HOST_USER}")
+# print(f"EMAIL_PASSWORD: {EMAIL_HOST_PASSWORD}")
 
 
 def send_email(to_email: str, code: str):
     # Emailni sarlavhasi va tarkibini tayyorlash
     message = MIMEMultipart()
-    message["From"] = EMAIL_USER
+    message["From"] = EMAIL_HOST_USER
     message["To"] = to_email
     message["Subject"] = "Tasdiqlash kodi"
 
     # Xabar matnini biriktirish
     body = f"Sizning tasdiqlash kodingiz: {code}"
     message.attach(MIMEText(body, "plain"))
+    server = None
 
     try:
-        # SMTP serverga ulanish va xabarni yuborish
         server = smtplib.SMTP(EMAIL_HOST, int(EMAIL_PORT))
         server.starttls()
-        server.login(EMAIL_USER, EMAIL_PASSWORD)
-        server.sendmail(EMAIL_USER, to_email, message.as_string())
-        print(f"Email muvaffaqiyatli yuborildi !")
+        server.login(EMAIL_HOST_USER, EMAIL_HOST_PASSWORD)
+        server.sendmail(EMAIL_HOST_USER, to_email, message.as_string())
+        print(f"[INFO] Email {to_email} ga muvaffaqiyatli yuborildi!")
+
     except Exception as e:
-        print(f" Xatolik: {e}")
+        print(f"Xatolik: {e}")
+        raise HTTPException(status_code=500, detail=f"Email yuborishda xatolik: {str(e)}")
+
+    finally:
+        if server:
+            print(f"Server: {server}")
+            server.quit()
 
 def send_verify_code(email_address: str):
     verify_code = generate_verify_code()
-    send_email(email_address, verify_code)
-    return f"Email muvaffaqiyatli yuborildi!: {verify_code}"
+    if verify_code:
+        send_email(email_address, verify_code)
+        print(f"Email muvaffaqiyatli yuborildi, kod: {verify_code}")
+        return verify_code
+    print("verify_code mavjud emas")
+    raise HTTPException(status_code=500, detail="verify_code mavjud emas")
+
