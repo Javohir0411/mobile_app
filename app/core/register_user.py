@@ -1,15 +1,14 @@
-from jose import JWTError
-
 from app.core.security import create_access_token, verify_password, create_refresh_token
 from app.db.crud import get_user_by_email, create_user, save_refresh_token
 from app.db.schemas import UserLogin, UserBase, TokenRefreshRequest
 from app.core.config import settings
 from fastapi.params import Depends
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from app.db.session import get_db
 from datetime import timedelta
 from app.db.models import User
+from jose import JWTError
 import logging
 import jwt
 
@@ -61,38 +60,3 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 def logout():
     return {"message": "Foydalanuvchi muvaffaqiyatli o'chirildi (Frontendda token o'chirib qo'yilish kerak!)"}
 
-
-# # ------------- Refresh Access Token ----------------
-#
-# def refresh_access_token(request: TokenRefreshRequest, db: Session = Depends(get_db)):
-#     try:
-#         payload = jwt.decode(request.refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-#         user_email = payload.get("sub")
-#
-#         if user_email is None:
-#             logger.info(f"User email mavjud emas: {user_email}")
-#             raise HTTPException(status_code=401, detail="Yaroqsiz token")
-#
-#         user = db.query(User).filter(User.user_email == user_email).first()
-#
-#         if not user or user.refresh_token != request.refresh_token:
-#             logger.info("Xatolik, User email yoki mos token topilmadi !")
-#             raise HTTPException(status_code=401, detail="Xatolik, User email yoki mos token topilmadi !")
-#
-#         # Yangi access va refresh token yaratish
-#         new_access_token = create_access_token(data={"sub": user.email})
-#         new_refresh_token = create_refresh_token(data={"sub": user.email})
-#
-#         # Bazaga yangi refresh tokenni yozish
-#         save_refresh_token(db, user.id, new_refresh_token)
-#
-#         return {
-#             "access_token": new_access_token,
-#             "refresh_token": new_refresh_token,
-#             "token_type": "bearer"
-#         }
-
-    # except JWTError as e:
-    #     logger.info(f"JWTError: {e}")
-    #     raise HTTPException(status_code=401, detail=f"Yaroqsiz token: {e}")
-    #

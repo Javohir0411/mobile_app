@@ -1,5 +1,5 @@
 from email.mime.multipart import MIMEMultipart  # Email ichidagi matn va fayllarni biriktirish uchun.
-from app.db.schemas import ShopInfoBase
+from app.db.schemas import ShopInfoBase, SellItemSchema
 from email.mime.text import MIMEText  # Email ichidagi matn va fayllarni biriktirish uchun.
 from fastapi import HTTPException
 from dotenv import load_dotenv
@@ -203,12 +203,14 @@ def generate_verify_code():
     print(f"generate_verify_code: {verify_code}")
     return verify_code
 
+
 load_dotenv()
 
 EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_PORT = os.getenv("EMAIL_PORT")
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+
 
 # print(f"EMAIL_HOST: {EMAIL_HOST}")
 # print(f"EMAIL_PORT: {EMAIL_PORT}")
@@ -244,6 +246,7 @@ def send_email(to_email: str, code: str):
             print(f"Server: {server}")
             server.quit()
 
+
 def send_verify_code(email_address: str):
     verify_code = generate_verify_code()
     if verify_code:
@@ -252,4 +255,14 @@ def send_verify_code(email_address: str):
         return verify_code
     print("verify_code mavjud emas")
     raise HTTPException(status_code=500, detail="verify_code mavjud emas")
+
+
+# --------------- search uchun tilni tanlash ------------
+
+def detect_language(text: str):
+    for c in text:
+        if "а" <= c <= "я" or "А" <= c <= "Я":
+            return "ru"
+        return "uz"
+
 

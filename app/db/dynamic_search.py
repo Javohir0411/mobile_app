@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import except_
+from app.db.models import Brand, Item, Model, ShopInfo, Category
+from fastapi import APIRouter, Depends, HTTPException, Query
+from app.core.utils import detect_language
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.db.models import Brand, Item, Model, ShopInfo, Category
+from sqlalchemy import except_
+import logging
 import redis
 import json
-import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -96,6 +97,7 @@ def get_organization_by_inn(inn: int, db: Session):
 
     return {"organization_name": org.company_name, "owner": org.founders}
 
+
 # ------------ Item obyektini avtomatik to'ldirish ---------------
 
 def get_latest_item(category_id: int, brand_id: int, model_id: int, db: Session = Depends(get_db)):
@@ -111,3 +113,42 @@ def get_latest_item(category_id: int, brand_id: int, model_id: int, db: Session 
     )
 
     return latest_item if latest_item else {}
+
+
+# ---------------- Search bar yoki skaner orqali qidiruv ----------------
+
+def search_items(
+        category: str = Query(None),
+        brand: str = Query(None),
+        model: str = Query(None),
+        imei: str = Query(None),
+        imei_2: str = Query(None),
+        barcode: str = Query(None),
+        lang: str = Query("uz"),
+        db: Session = Depends(get_db)
+):
+    query = db.query(Item)
+    if category:
+        lang = detect_language(category)
+        if lang == "uz":
+            query = query.join(Item.item_category).filter(Category.category_name_uz.ilike(f"%{category}%"))
+        else:
+            query = query.join(Item.item_category).filter(Category.category_name_ru.ilike(f"%{category}%"))
+
+    if brand:
+        query = query.join(Item.item_brand).filter(Brand.brand_name.ilike(f"%{brand}%"))
+
+    if model:
+        query = query.join(Item.item_model).filter(Model.model_name.ilike(f"%{model}%"))
+
+    if imei:
+        query = query.filter(Item.item_imei == imei)
+
+    if imei_2:
+        query = query.filter(Item.item_imei_2 == imei_2)
+
+    if barcode:
+        query = query.filter(Item.item_barcode == barcode)
+
+    logger.info(f"Searching Items with lang: {lang}")
+    return query.all()

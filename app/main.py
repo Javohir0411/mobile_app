@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from app.api.v1.routes_products import (
     category_router,
     brand_router,
@@ -10,6 +10,8 @@ from app.api.v1.routes_products import (
 from app.api.v1.routers_auth import router as auth_router
 from app.api.v1.routers_auth import verify_router
 from app.api.v1.routes_dynamic_search import router as dynamic_search
+from app.api.v1.routes_sales import router as selling_info
+from app.services.report_service import router as income_expense
 import uvicorn
 
 app = FastAPI(title="My Project API", version="1.0")
@@ -23,13 +25,14 @@ routers = [
     (user_router, "User"),
     (auth_router, "Registration"),
     (verify_router, "Verification Code"),
-    (dynamic_search, "Dynamic Search")
+    (dynamic_search, "Dynamic Search"),
+    (selling_info, "Selling Information"),
+    (income_expense, "Income and Expense")
 ]
 
 for router, tag in routers:
     app.include_router(router, prefix="/api/v1", tags=[tag])
 
-from fastapi import FastAPI, Request
 
 # app = FastAPI()
 
@@ -37,6 +40,7 @@ from fastapi import FastAPI, Request
 def get_ip(request: Request):
     user_ip = request.client.host
     return {"Sizning IP manzilingiz": user_ip}
+
 
 # @app.get("/")
 # def read_root():

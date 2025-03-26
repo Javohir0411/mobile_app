@@ -8,13 +8,14 @@ from sqlalchemy import (Column,
                         DateTime,
                         func,
                         ARRAY,
-                        Boolean)
+                        Boolean,
+                        Numeric)
 from app.enum import (ItemConditionEnum,
                       ItemImeiEnum,
-                      UserGenderEnum, UserRoleEnum)
+                      UserGenderEnum, UserRoleEnum, CurrencyEnum)
 from sqlalchemy.orm import relationship
 from .base import Base
-import datetime
+from datetime import datetime, timedelta
 
 
 class Category(Base):
@@ -57,26 +58,41 @@ class Item(Base):
     id = Column(Integer, primary_key=True)
     item_category_id = Column(Integer, ForeignKey("category.id", ondelete="CASCADE"))
     item_category = relationship("Category", backref="items", passive_deletes=True)
+
     item_brand_id = Column(Integer, ForeignKey("brand.id", ondelete="CASCADE"))
     item_brand = relationship("Brand", backref="items", passive_deletes=True)
+
     item_model_id = Column(Integer, ForeignKey("model.id", ondelete="CASCADE"))
     item_model = relationship("Model", backref="items", passive_deletes=True)
-    item_color = Column(String(50), nullable=False)
+
+    item_color = Column(String(50), nullable=False, default=None)
     item_ram = Column(Integer)
     item_is_new = Column(Enum(ItemConditionEnum))
-    item_description = Column(Text)
-    item_imei = Column(String(20))
-    item_imei_2 = Column(String(20))
-    item_imei_status = Column(Enum(ItemImeiEnum))
-    item_imei_status_2 = Column(Enum(ItemImeiEnum))
-    item_seria_number = Column(String)
+    item_description = Column(Text, default=None)
+    item_imei = Column(String(20), default=None)
+    item_imei_2 = Column(String(20), default=None)
+    item_imei_status = Column(Enum(ItemImeiEnum), default=ItemImeiEnum.UNREGISTERED.value)
+    item_imei_status_2 = Column(Enum(ItemImeiEnum), default=ItemImeiEnum.UNREGISTERED.value)
+    item_barcode = Column(String, unique=True, nullable=True, default=None)
+    item_seria_number = Column(String, default=None)
+
+    # Mahsulotni sotib olinganligi haqidagi ma'lumotlar
     item_purchased_price = Column(Float, nullable=False)
-    item_selling_price = Column(Float)
-    item_quantity = Column(Integer)
+    purchased_currency = Column(Enum(CurrencyEnum), default=CurrencyEnum.UZS.value)
+    item_purchased_quantity = Column(Integer, default=1)
+    item_purchased_date = Column(DateTime(timezone=True), nullable=True)
+    previous_owner_info = Column(Text, default=None)  # Mahsulotni do'konga sotib ketgan inson ma'lumotlari
+
+    # Mahsulot sotilganligi haqidagi ma'lumotlar
+    item_sold_price = Column(Float, nullable=True, default=None)
+    sold_currency = Column(Enum(CurrencyEnum), default=CurrencyEnum.UZS.value)
+    item_sold_quantity = Column(Integer, default=1)
+    item_is_sold = Column(Boolean, default=False)
+    item_sold_date = Column(DateTime(timezone=True), nullable=True, server_default=func.now(), onupdate=func.now())
+    customer_info = Column(Text, default=None)  # Mahsulotni do'kondan sotib olgan inson ma'lumotlari
+
     shop_info_id = Column(Integer, ForeignKey("shop_info.id"))  # Do'kon egasini ma'lumotlari modeling ulanish
     shop_info = relationship("ShopInfo")  # Do'kon egasi ma'lumotlari modelidan ma'lumot olish
-    customer_info = Column(Text)  # Mahsulotni do'kondan sotib olgan inson ma'lumotlari
-    previous_owner_info = Column(Text)  # Mahsulotni do'konga sotib ketgan inson ma'lumotlari
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
     updated_at = Column(DateTime(timezone=True), server_default=func.now(),
                         onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
@@ -98,6 +114,7 @@ class User(Base):
     role = Column(Enum(UserRoleEnum),
                   default=UserRoleEnum.GUEST)  # guest - ro'yxatdan o'tmagan, user - ro'yxatdan o'tgan
     ip_address = Column(String)
+    transaction = relationship("Transaction", back_populates="user")
     created_at = Column(DateTime(timezone=True), server_default=func.now())  # Avtomatik kiritish vaqtini saqlash
     updated_at = Column(DateTime(timezone=True), server_default=func.now(),
                         onupdate=func.now())  # Yangilangan vaqtini avtomatik saqlash
@@ -128,4 +145,15 @@ class VerificationCode(Base):
     id = Column(Integer, primary_key=True)
     email = Column(String, unique=True, index=True, nullable=False)
     code = Column(String, nullable=False)
-    expires_at = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(minutes=5))
+    expires_at = Column(DateTime, default=lambda: datetime.now() + timedelta(minutes=5))
+
+
+class Transaction(Base):
+    __tablename__ = "transaction"
+
+    id = Column(Integer, primary_key=True)
+    date = Column(DateTime, nullable=False)
+    income = Column(Numeric(10, 2), default=0)
+    expense = Column(Numeric(10, 2), default=0)
+    user_id = Column(Integer, ForeignKey("user.id"))
+    user = relationship("User", back_populates="transaction")

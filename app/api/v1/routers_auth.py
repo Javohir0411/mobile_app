@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Response, HTTPException, BackgroundTasks
 from app.core.security import create_access_token, create_refresh_token
-from app.db.crud import create_guest_user, get_user_by_email, save_refresh_token
 from app.core.register_user import register, login, logout
 from app.core.utils import send_verify_code
 from app.core.config import settings
@@ -23,12 +22,14 @@ from app.db.schemas import (
 from app.db.crud import (
     create_guest_user,
     get_guest_by_ip,
-    register_or_update_user_by_phone,
+    # register_or_update_user_by_phone,
     update_verification_code,
     verify_code,
     create_verification_code,
     get_verification_code,
-    delete_verification_code)
+    delete_verification_code,
+    get_user_by_email,
+    save_refresh_token)
 import logging
 import random
 import os

@@ -5,7 +5,8 @@ from app.db.schemas import (UserBase,
                             ItemUpdate,
                             ShopInfoBase,
                             UserRead,
-                            GuestUserScheme
+                            GuestUserScheme,
+                            SellItemSchema
                             )
 from app.core.utils import get_translated_field
 from app.db.models import User, UserRoleEnum
@@ -20,10 +21,13 @@ from app.db.models import (Category,
                            VerificationCode
                            )
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from app.enum import UserRoleEnum
 from typing import List
+from app.core.utils import send_verify_code
 import logging
+import pytz
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -167,6 +171,7 @@ def delete_model(db: Session, model_id: int):
 
 # Create - yangi model qo'shish
 def create_user(db: Session, user: UserBase):
+
     hashed_password = hash_password(user.user_password)
 
     if not hashed_password:
@@ -183,11 +188,38 @@ def create_user(db: Session, user: UserBase):
         user_gender=user.user_gender
     )
     # db_user = User(**user.model_dump())
-    print(f"crud.py 167 db_user: {db_user.user_email}")
+    print(f"crud.py 186 db_user: {db_user.user_email}")
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
+#
+# def create_user(request: Request, db: Session, user: UserBase):
+#     existing_user = db.query(User).filter(User.user_email == user.user_email).first()
+#     if existing_user:
+#         raise HTTPException(status_code=400, detail="Email allaqachon ro'yxatdan o'tgan")
+#
+#     guest_user = db.query(User).filter(User.ip_address == request.client.host, User.role == "guest").first()
+#     if not guest_user:
+#         raise HTTPException(status_code=400, detail="Guest user not found")
+#
+#     verification_code = send_verify_code(user.user_email)
+#
+#     guest_user.user_firstname = user.user_firstname
+#     guest_user.last_name = user.user_lastname
+#     guest_user.email = user.user_email
+#     guest_user.user_phone_number = user.user_phone_number
+#     guest_user.user_password = user.user_password
+#     guest_user.user_image = user.user_image
+#     guest_user.user_gender = user.user_gender
+#     guest_user.is_verified = user.is_verified
+#     guest_user.role = user.role
+#     guest_user.ip_address = user.ip_address
+#     guest_user.created_at = user.created_at
+#     guest_user.updated_at = user.updated_at
+#
+#     db.commit()
+#     return {"message": "Tasdiqlash kodi yuborildi", "email": user.user_email}
 
 
 # Read - Barcha ma'lumotlarni o'qish
@@ -251,15 +283,6 @@ def delete_user(user_id: int, db: Session):
 
 # ------------- Guest uchun crud ------------------
 
-# Mehmon foydalanuvchini saqlash
-# def create_guest_user(db: Session, ip_address: str):
-#     guest_user = User(role=UserRoleEnum.GUEST.value, ip_address=ip_address)
-#     db.add(guest_user)
-#     db.commit()
-#     db.refresh(guest_user)
-#     return guest_user
-
-
 def create_guest_user(db: Session, ip_address: str):
     # IP manzil bo'yicha mehmon foydalanuvchi mavjudligini tekshirish
     existing_guest = db.query(User).filter_by(ip_address=ip_address, role=UserRoleEnum.GUEST.value).first()
@@ -272,6 +295,7 @@ def create_guest_user(db: Session, ip_address: str):
         user_firstname="Guest",
         user_lastname="User",
         role=UserRoleEnum.GUEST.value,
+        is_verified=False,
         ip_address=ip_address
     )
     try:
@@ -292,16 +316,16 @@ def get_guest_by_ip(db: Session, ip_address: str):
 
 
 # Email bilan register yoki update qilish
-def register_or_update_user_by_phone(db: Session, user_id: int, user_data: dict):
-    user = db.query(User).filter(User.id == user_id).first()
-    if user:
-        for key, value in user_data.items():
-            setattr(user, key, value)
-        user.role = UserRoleEnum.USER.value
-        user.is_verified = True
-        db.commit()
-        db.refresh(user)
-        return user
+# def register_or_update_user_by_phone(db: Session, user_id: int, user_data: dict):
+#     user = db.query(User).filter(User.id == user_id).first()
+#     if user:
+#         for key, value in user_data.items():
+#             setattr(user, key, value)
+#         user.role = UserRoleEnum.USER.value
+#         user.is_verified = True
+#         db.commit()
+#         db.refresh(user)
+#         return user
 
 
 def update_verification_code(db: Session, user_id: int, code: str):
@@ -313,16 +337,15 @@ def update_verification_code(db: Session, user_id: int, code: str):
     return user
 
 
-def verify_code(db: Session, user_id: int, code: str):
-    user = db.query(User).filter(User.id == user_id, User.verification_code == code).first()
+def verify_code(db: Session, email: str, code: str):
+    user = db.query(User).filter(User.user_email == email, User.verification_code == code).first()
     if user:
         user.is_verified = True
         user.role = UserRoleEnum.USER.value
-        user.verification_code = None
+        user.verification_code = None  # Tasdiqlash kodini tozalash
         db.commit()
         db.refresh(user)
     return user
-
 
 # --------------------------------------------------
 
@@ -336,8 +359,6 @@ def create_items(db: Session, items: ItemBase):
     db.commit()
     db.refresh(db_item)
     return db_item
-
-
 # Read - Barcha ma'lumotlarni o'qish
 def get_items(db: Session):
     return db.query(Item).all()
@@ -349,17 +370,20 @@ def get_item(db: Session, item_id: int):
 
 
 # Update - Id bo'yicha qidirilgan Itemni yangilash
-def update_item(db: Session, item_id: int, item: ItemUpdate):
-    items = db.query(Item).filter(Item.id == item_id).first()
-    if not items:
+def update_item(db: Session, item_id: int, item_update: ItemUpdate):
+    # Bazadagi eski obyektni olish
+    item = db.query(Item).filter(Item.id == item_id).first()
+    if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    for key, value in item.model_dump(exclude_unset=True).items():
-        setattr(items, key, value)
+    update_data = item_update.dict(exclude_unset=True)  # Faqat o'zgargan maydonlarni olish
+
+    for key, value in update_data.items():
+        setattr(item, key, value)  # O'zgargan maydonlarni qo'llash
 
     db.commit()
-    db.refresh(items)
-    return items
+    db.refresh(item)
+    return item
 
 
 # Delete - ID bo'yicha qidirilgan Itemni o'chiramiz
@@ -372,6 +396,32 @@ def delete_item(db: Session, item_id: int):
     db.commit()
     return items
 
+
+# ----------- Mahsulotni sotilgan deb belgilash ------------
+
+def sell_item(item_id: int, sell_data: SellItemSchema, db: Session):
+    item = db.query(Item).filter(Item.id == item_id).first()
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Ushbu ID bo'yicha mahsulot bazadan topilmadi !")
+
+    print(f"Item before update: {item.item_is_sold}")
+
+    if item.item_is_sold:
+        raise HTTPException(status_code=400, detail="Bu mahsulot allaqachon sotilgan !")
+
+    item.item_is_sold = True
+    item.item_sold_price = sell_data.sold_price
+    item.sold_currency = sell_data.sold_currency
+    item.item_sold_quantity = sell_data.sold_quantity
+    item.customer_info = sell_data.customer_info
+    item.item_sold_date = sell_data.sold_date
+
+    print(f"Item after update: {item.item_is_sold}")
+
+    db.commit()
+    db.refresh(item)
+    return {"message": "Mahsulot sotildi !", "item_id": item_id}
 
 # ----------------- ShopInfo model -------------------
 
@@ -461,18 +511,3 @@ def save_refresh_token(db: Session, user_id: int, refresh_token: str):
         return user
     logger.info("User topilmadi !")
     return HTTPException(status_code=500, detail="User obyektini olib bo'lmadi")
-
-# def save_refresh_token(db: Session, user_id: int, refresh_token: str):
-#     print(f"🔹 Bazaga refresh token saqlash: {refresh_token}")  # Debug
-#
-#     user = db.query(User).filter(User.id == user_id).first()
-#     if not user:
-#         print("❌ Xato: User topilmadi!")
-#         return HTTPException(status_code=500, detail="User obyektini olib bo'lmadi")
-#
-#     user.refresh_token = refresh_token
-#     db.commit()
-#     db.refresh(user)
-#
-#     print(f"✅ Refresh token bazaga yozildi: {user.refresh_token}")  # Debug
-#     return user

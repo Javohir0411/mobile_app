@@ -38,8 +38,17 @@ from app.db.crud import (delete_category,
                          delete_item,
                          delete_user,
                          )
-from app.db.schemas import CategoryBase, BrandBase, ModelBase, ShopInfoBase, ItemBase, InputInnNumberBase, UserBase, \
-    UserUpdate, UserRead
+from app.db.schemas import (
+                        CategoryBase,
+                        BrandBase,
+                        ModelBase,
+                        ShopInfoBase,
+                        ItemBase,
+                        ItemUpdate,
+                        InputInnNumberBase,
+                        UserBase,
+                        UserUpdate,
+                        UserRead)
 from app.db.session import get_db
 from app.core.utils import get_shop_info
 
@@ -193,7 +202,7 @@ def add_item(item: ItemBase, db: Session = Depends(get_db)):
 
 
 @item_router.put("/items/{item_id}")
-def modify_item(item_id: int, item: ItemBase, db: Session = Depends(get_db)):
+def modify_item(item_id: int, item: ItemUpdate, db: Session = Depends(get_db)):
     return update_item(db, item_id, item)
 
 
