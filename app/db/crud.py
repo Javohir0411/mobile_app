@@ -20,7 +20,7 @@ from app.db.models import (Category,
                            ShopInfo,
                            VerificationCode
                            )
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from fastapi import HTTPException, Request
 from app.enum import UserRoleEnum
 from typing import List
@@ -171,7 +171,6 @@ def delete_model(db: Session, model_id: int):
 
 # Create - yangi model qo'shish
 def create_user(db: Session, user: UserBase):
-
     hashed_password = hash_password(user.user_password)
 
     if not hashed_password:
@@ -188,38 +187,11 @@ def create_user(db: Session, user: UserBase):
         user_gender=user.user_gender
     )
     # db_user = User(**user.model_dump())
-    print(f"crud.py 186 db_user: {db_user.user_email}")
+    print(f"crud.py 191 db_user: {db_user.user_email}")
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
-#
-# def create_user(request: Request, db: Session, user: UserBase):
-#     existing_user = db.query(User).filter(User.user_email == user.user_email).first()
-#     if existing_user:
-#         raise HTTPException(status_code=400, detail="Email allaqachon ro'yxatdan o'tgan")
-#
-#     guest_user = db.query(User).filter(User.ip_address == request.client.host, User.role == "guest").first()
-#     if not guest_user:
-#         raise HTTPException(status_code=400, detail="Guest user not found")
-#
-#     verification_code = send_verify_code(user.user_email)
-#
-#     guest_user.user_firstname = user.user_firstname
-#     guest_user.last_name = user.user_lastname
-#     guest_user.email = user.user_email
-#     guest_user.user_phone_number = user.user_phone_number
-#     guest_user.user_password = user.user_password
-#     guest_user.user_image = user.user_image
-#     guest_user.user_gender = user.user_gender
-#     guest_user.is_verified = user.is_verified
-#     guest_user.role = user.role
-#     guest_user.ip_address = user.ip_address
-#     guest_user.created_at = user.created_at
-#     guest_user.updated_at = user.updated_at
-#
-#     db.commit()
-#     return {"message": "Tasdiqlash kodi yuborildi", "email": user.user_email}
 
 
 # Read - Barcha ma'lumotlarni o'qish
@@ -347,6 +319,7 @@ def verify_code(db: Session, email: str, code: str):
         db.refresh(user)
     return user
 
+
 # --------------------------------------------------
 
 
@@ -359,14 +332,24 @@ def create_items(db: Session, items: ItemBase):
     db.commit()
     db.refresh(db_item)
     return db_item
+
+
 # Read - Barcha ma'lumotlarni o'qish
 def get_items(db: Session):
-    return db.query(Item).all()
+    return db.query(Item).options(
+        joinedload(Item.item_category),
+        joinedload(Item.item_brand),
+        joinedload(Item.item_model)
+    ).all()
 
 
 # ID bo'yicha qidirilgan Itemni ko'rish
 def get_item(db: Session, item_id: int):
-    return db.query(Item).filter(Item.id == item_id).first()
+    return db.query(Item).options(
+        joinedload(Item.item_category),
+        joinedload(Item.item_brand),
+        joinedload(Item.item_model)
+    ).filter(Item.id == item_id).first()
 
 
 # Update - Id bo'yicha qidirilgan Itemni yangilash
@@ -422,6 +405,7 @@ def sell_item(item_id: int, sell_data: SellItemSchema, db: Session):
     db.commit()
     db.refresh(item)
     return {"message": "Mahsulot sotildi !", "item_id": item_id}
+
 
 # ----------------- ShopInfo model -------------------
 

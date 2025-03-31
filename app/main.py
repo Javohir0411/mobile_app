@@ -11,7 +11,8 @@ from app.api.v1.routers_auth import router as auth_router
 from app.api.v1.routers_auth import verify_router
 from app.api.v1.routes_dynamic_search import router as dynamic_search
 from app.api.v1.routes_sales import router as selling_info
-from app.services.report_service import router as income_expense
+from app.api.v1.routes_reports import report_router as income_expense
+from app.api.v1.routes_exports import export_router
 import uvicorn
 
 app = FastAPI(title="My Project API", version="1.0")
@@ -27,7 +28,8 @@ routers = [
     (verify_router, "Verification Code"),
     (dynamic_search, "Dynamic Search"),
     (selling_info, "Selling Information"),
-    (income_expense, "Income and Expense")
+    (income_expense, "Income and Expense"),
+    (export_router, "Save to Excel and PDF")
 ]
 
 for router, tag in routers:

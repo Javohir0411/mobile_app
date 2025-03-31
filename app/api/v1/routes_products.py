@@ -1,9 +1,7 @@
 from http.client import HTTPException
-from typing import List
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-
+from typing import List
 from app.db.crud import (create_category,
                          create_brand,
                          create_model,

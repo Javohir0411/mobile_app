@@ -152,8 +152,13 @@ class Transaction(Base):
     __tablename__ = "transaction"
 
     id = Column(Integer, primary_key=True)
-    date = Column(DateTime, nullable=False)
+    date = Column(DateTime, nullable=False, default=datetime.utcnow)
     income = Column(Numeric(10, 2), default=0)
     expense = Column(Numeric(10, 2), default=0)
+    official_usd_rate = Column(Numeric(10, 4), nullable=False)  # Markaziy bank kursi
+    custom_usd_rate = Column(Numeric(10, 4), nullable=True)  # Foydalanuvchi kursi
+    used_usd_rate = Column(Numeric(10, 4), nullable=False)  # Ishlatilgan kurs
     user_id = Column(Integer, ForeignKey("user.id"))
     user = relationship("User", back_populates="transaction")
+
+

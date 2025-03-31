@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Response, HTTPException, BackgroundTasks
-from app.core.security import create_access_token, create_refresh_token
+from app.core.security import create_access_token, create_refresh_token, get_current_user
 from app.core.register_user import register, login, logout
 from app.core.utils import send_verify_code
 from app.core.config import settings
@@ -54,6 +54,9 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 def login_user(user: UserLogin, db: Session = Depends(get_db)):
     return login(user, db)
 
+# @router.get("/protected-endpoint")
+# async def protected_route(current_user: User = Depends(get_current_user)):
+#     return {"message": f"Hello, {current_user.user_email}! You are authenticated."}
 
 @router.post("/logout")
 def logout_user():

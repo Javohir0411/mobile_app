@@ -260,9 +260,12 @@ def send_verify_code(email_address: str):
 # --------------- search uchun tilni tanlash ------------
 
 def detect_language(text: str):
-    for c in text:
-        if "а" <= c <= "я" or "А" <= c <= "Я":
-            return "ru"
-        return "uz"
+    if text:
+        for c in text:
+            if "а" <= c <= "я" or "А" <= c <= "Я":
+                return "ru"
+            return "uz"
+    else:
+        raise HTTPException(status_code=500, detail="Detect language uchun qiymat kelmadi !")
 
 

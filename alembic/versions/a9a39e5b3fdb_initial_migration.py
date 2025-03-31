@@ -1,8 +1,8 @@
-"""Add transactions table
+"""Initial migration
 
-Revision ID: ee94c530f367
-Revises: 3a5bfec36399
-Create Date: 2025-03-24 17:37:41.013155
+Revision ID: a9a39e5b3fdb
+Revises: 
+Create Date: 2025-03-27 17:55:22.081173
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'ee94c530f367'
-down_revision: Union[str, None] = '3a5bfec36399'
+revision: str = 'a9a39e5b3fdb'
+down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -25,6 +25,9 @@ def upgrade() -> None:
     sa.Column('date', sa.DateTime(), nullable=False),
     sa.Column('income', sa.Numeric(precision=10, scale=2), nullable=True),
     sa.Column('expense', sa.Numeric(precision=10, scale=2), nullable=True),
+    sa.Column('official_usd_rate', sa.Numeric(precision=10, scale=4), nullable=False),
+    sa.Column('custom_usd_rate', sa.Numeric(precision=10, scale=4), nullable=True),
+    sa.Column('used_usd_rate', sa.Numeric(precision=10, scale=4), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')

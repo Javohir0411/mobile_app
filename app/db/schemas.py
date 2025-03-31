@@ -13,6 +13,7 @@ from typing import Optional, List
 # - - - - - - - - - CategoryBase model - - - - - - - -
 
 class CategoryBase(BaseModel):
+    id: int
     category_name_uz: str
     category_name_ru: str
 
@@ -20,6 +21,7 @@ class CategoryBase(BaseModel):
 # - - - - - - - - - BrandBase model - - - - - - - -
 
 class BrandBase(BaseModel):
+    id: int
     brand_name: str
     category_id: int
 
@@ -27,6 +29,7 @@ class BrandBase(BaseModel):
 # - - - - - - - - - ModelBase model - - - - - - - -
 
 class ModelBase(BaseModel):
+    id: int
     model_name: str
     brand_id: int
 
@@ -69,12 +72,42 @@ class ItemBase(BaseModel):
 
     shop_info_id: int
 
+# class ItemResponse(BaseModel):
+#     item_category: CategoryBase
+#     item_brand: BrandBase
+#     item_model: ModelBase
+#     item_color: str
+#     item_ram: Optional[int] = None
+#     item_is_new: ItemConditionEnum
+#     item_description: Optional[str] = None
+#     item_imei: Optional[str] = None
+#     item_imei_2: Optional[str] = None
+#     item_barcode: str
+#     item_imei_status: ItemImeiEnum
+#     item_imei_status_2: ItemImeiEnum
+#     item_seria_number: Optional[str] = None
+#
+#     item_purchased_price: float
+#     purchased_currency: CurrencyEnum
+#     item_purchased_quantity: int
+#     item_purchased_date: datetime
+#     previous_owner_info: str
+#
+#     item_sold_price: float
+#     sold_currency: CurrencyEnum
+#     item_sold_quantity: int
+#     item_is_sold: Optional[bool] = False
+#     customer_info: str
+#     item_sold_date: datetime
+#
+#     shop_info_id: int
+
 
 # Itemni  update qilish uchun
 class ItemUpdate(BaseModel):
-    item_category_id: Optional[int] = None
-    item_brand_id: Optional[int] = None
-    item_model_id: Optional[int] = None
+    item_category_id: int
+    item_brand_id: int
+    item_model_id: int
     item_color: Optional[str] = None
     item_ram: Optional[int] = None
     item_is_new: Optional[ItemConditionEnum] = Field(default=None)
