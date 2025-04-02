@@ -1,3 +1,4 @@
+from app.core.security import verify_token
 from app.services.report_service import get_income_report, get_expense_report
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from app.db.dynamic_search import detect_language
@@ -7,6 +8,7 @@ from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from sqlalchemy.orm import Session
+from fastapi import HTTPException, Query
 from reportlab.lib import colors
 from app.db.models import Item
 from typing import Optional
@@ -16,202 +18,235 @@ import os
 
 # --------- tushumni excelga saqlash --------------------
 
-def income_to_excel(db: Session, period: Optional[str] = None, start_date: Optional[str] = None,
-                    end_date: Optional[str] = None, rate: Optional[float] = None, convert_to: str = "uzs"):
-    report = get_income_report(db, period, start_date, end_date, rate, convert_to)
-    total_income = report.get("Oraliqdagi umumiy tushum", 2)
-    print(f"Oraliqdagi umumiy tushum: {total_income} {report.get('Tanlangan valyuta')}")
+def income_to_excel(token: str,
+                    db: Session, period: Optional[str] = None,
+                    start_date: Optional[str] = None,
+                    end_date: Optional[str] = None,
+                    rate: Optional[float] = None,
+                    convert_to: str = "uzs"):
+    user = verify_token(token, db)
+    if user:
+        report = get_income_report(db, period, start_date, end_date, rate, convert_to)
+        total_income = report.get("Oraliqdagi umumiy tushum", 2)
+        print(f"Oraliqdagi umumiy tushum: {total_income} {report.get('Tanlangan valyuta')}")
 
-    if "error" in report:
-        return report  # Xatolik bo'lsa, xatolikni qaytaramiz
+        if "error" in report:
+            return report  # Xatolik bo'lsa, xatolikni qaytaramiz
 
-    data = report["Mahsulot ma'lumotlari"]
-    # print(f"data: {data}")
-    if not data:
-        return {"error": {"Berilgan oraliqda ma'lumot yo'q"}}
+        data = report["Mahsulot ma'lumotlari"]
+        # print(f"data: {data}")
+        if not data:
+            return {"error": {"Berilgan oraliqda ma'lumot yo'q"}}
 
-    # Valyutani faqat nomini olish uchun `.name` ishlatamiz
-    for item in data:
-        item["Sotilgan valyutasi"] = item["Sotilgan valyutasi"].name  # USD, UZS ko‘rinishida chiqarish uchun
+        # Valyutani faqat nomini olish uchun `.name` ishlatamiz
+        for item in data:
+            item["Sotilgan valyutasi"] = item["Sotilgan valyutasi"].name  # USD, UZS ko‘rinishida chiqarish uchun
 
-    df = pd.DataFrame(data)  # Pandas DataFrame ga o'tkazamiz
-    print(f"df column: {df.columns}")
+        df = pd.DataFrame(data)  # Pandas DataFrame ga o'tkazamiz
+        print(f"df column: {df.columns}")
 
-    # Ustunlar tartibini belgilash
-    df = df[["Brand", "Model", "Sotilgan miqdori", "Sotilgan summasi", "Sotilgan valyutasi", "Tovardan qolgan foyda",
-             "Sotilgan Sanasi", "Umumiy sotilgan summasi"]]
+        # Ustunlar tartibini belgilash
+        df = df[["Brand", "Model", "Sotilgan miqdori", "Sotilgan summasi", "Sotilgan valyutasi", "Tovardan qolgan foyda",
+                 "Sotilgan Sanasi", "Umumiy sotilgan summasi"]]
 
-    # Bo'sh qator
-    empty_row = pd.DataFrame({col: [""] for col in df.columns})
+        # Bo'sh qator
+        empty_row = pd.DataFrame({col: [""] for col in df.columns})
 
-    # Umumiy tushumni alohida qo‘shish
-    total_income_row = pd.DataFrame({
-        "Brand": ["Jami"],
-        "Model": [""],
-        "Sotilgan miqdori": [""],
-        "Sotilgan summasi": [""],
-        "Sotilgan valyutasi": [report.get("Tanlangan valyuta")],
-        "Tovardan qolgan foyda": [""],
-        "Sotilgan Sanasi": [""],
-        "Umumiy sotilgan summasi": [total_income]
-    })
+        # Umumiy tushumni alohida qo‘shish
+        total_income_row = pd.DataFrame({
+            "Brand": ["Jami"],
+            "Model": [""],
+            "Sotilgan miqdori": [""],
+            "Sotilgan summasi": [""],
+            "Sotilgan valyutasi": [report.get("Tanlangan valyuta")],
+            "Tovardan qolgan foyda": [""],
+            "Sotilgan Sanasi": [""],
+            "Umumiy sotilgan summasi": [total_income]
+        })
 
-    # DataFrame-ga qo‘shamiz
-    df = pd.concat([df, empty_row, total_income_row], ignore_index=True)
+        # DataFrame-ga qo‘shamiz
+        df = pd.concat([df, empty_row, total_income_row], ignore_index=True)
 
-    file_path = "income_report.xlsx"
-    df.to_excel(file_path, index=False)  # Excel fayl sifatida saqlaymiz
+        file_path = "income_report.xlsx"
+        df.to_excel(file_path, index=False)  # Excel fayl sifatida saqlaymiz
 
-    return FileResponse(file_path,
-                        filename="income_report.xlsx",
-                        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        return FileResponse(file_path,
+                            filename="income_report.xlsx",
+                            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    else:
+        raise HTTPException(status_code=401, detail="Noto'g'ri token yoki foydalanuvchi ro'yxatdan o'tmagan")
 
 
 # --------- chiqimni excelga saqlash --------------------
 
-def expense_to_excel(db: Session, period: Optional[str] = None,
-                     start_date: Optional[str] = None, end_date: Optional[str] = None,
-                     rate: Optional[float] = None, convert_to: str = "uzs"):
-    report = get_expense_report(db, period, start_date, end_date, rate, convert_to)
-    total_income = report.get("Oraliqdagi umumiy tushum", 2)
-    print(f"Oraliqdagi umumiy tushum: {total_income} {report.get('Tanlangan valyuta')}")
+def expense_to_excel(token: str,
+                     db: Session,
+                     period: Optional[str] = None,
+                     start_date: Optional[str] = None,
+                     end_date: Optional[str] = None,
+                     rate: Optional[float] = None,
+                     convert_to: str = "uzs"):
+    user = verify_token(token, db)
+    if user:
+        report = get_expense_report(db, period, start_date, end_date, rate, convert_to)
+        total_income = report.get("Oraliqdagi umumiy tushum", 2)
+        print(f"Oraliqdagi umumiy tushum: {total_income} {report.get('Tanlangan valyuta')}")
 
-    if "error" in report:
-        return report  # Xatolik bo'lsa, xatolikni qaytaramiz
+        if "error" in report:
+            return report  # Xatolik bo'lsa, xatolikni qaytaramiz
 
-    data = report["Mahsulot ma'lumotlari"]
-    # print(f"data: {data}")
-    if not data:
-        return {"error": {"Berilgan oraliqda ma'lumot yo'q"}}
+        data = report["Mahsulot ma'lumotlari"]
+        # print(f"data: {data}")
+        if not data:
+            return {"error": {"Berilgan oraliqda ma'lumot yo'q"}}
 
-    # Valyutani faqat nomini olish uchun `.name` ishlatamiz
-    for item in data:
-        item["Sotib olingan valyutasi"] = item["Sotib olingan valyutasi"].name  # USD, UZS ko‘rinishida chiqarish uchun
+        # Valyutani faqat nomini olish uchun `.name` ishlatamiz
+        for item in data:
+            item["Sotib olingan valyutasi"] = item[
+                "Sotib olingan valyutasi"].name  # USD, UZS ko‘rinishida chiqarish uchun
 
-    df = pd.DataFrame(data)  # Pandas DataFrame ga o'tkazamiz
-    print(f"df column: {df.columns}")
+        df = pd.DataFrame(data)  # Pandas DataFrame ga o'tkazamiz
+        print(f"df column: {df.columns}")
 
-    # Ustunlar tartibini belgilash
-    df = df[["Brand", "Model", "Sotib olingan miqdori", "Sotib olingan summasi", "Sotib olingan valyutasi",
-             "Sotib olingan sana", "Sotib olingan vaqt", "Umumiy sotib olingan summasi"]]
+        # Ustunlar tartibini belgilash
+        df = df[["Brand", "Model", "Sotib olingan miqdori", "Sotib olingan summasi", "Sotib olingan valyutasi",
+                 "Sotib olingan sana", "Sotib olingan vaqt", "Umumiy sotib olingan summasi"]]
 
-    expenses = db.query(Item).filter(Item.item_purchased_date.between(start_date, end_date)).all()
-    last_expense = expenses[-1] if expenses else None
+        expenses = db.query(Item).filter(Item.item_purchased_date.between(start_date, end_date)).all()
+        last_expense = expenses[-1] if expenses else None
 
-    # Bo'sh qator
-    empty_row = pd.DataFrame({col: [""] for col in df.columns})
+        # Bo'sh qator
+        empty_row = pd.DataFrame({col: [""] for col in df.columns})
 
-    # Umumiy tushumni alohida qo‘shish
-    total_income = report.get("Oraliqdagi umumiy xarajat", 2)
-    total_income_row = pd.DataFrame({
-        "Brand": ["Jami"],
-        "Model": [""],
-        "Sotib olingan miqdori": [""],
-        "Sotib olingan summasi": [""],
-        "Sotib olingan valyutasi": [report.get("Tanlangan valyuta")],
-        "Sotib olingan sana": last_expense.item_purchased_date.strftime("%Y-%m-%d") if last_expense else "",
-        "Sotib olingan vaqt": last_expense.item_purchased_date.strftime("%H:%M:%S") if last_expense else "",
-        "Umumiy sotib olingan summasi": [total_income]
-    })
+        # Umumiy tushumni alohida qo‘shish
+        total_income = report.get("Oraliqdagi umumiy xarajat", 2)
+        total_income_row = pd.DataFrame({
+            "Brand": ["Jami"],
+            "Model": [""],
+            "Sotib olingan miqdori": [""],
+            "Sotib olingan summasi": [""],
+            "Sotib olingan valyutasi": [report.get("Tanlangan valyuta")],
+            "Sotib olingan sana": last_expense.item_purchased_date.strftime("%Y-%m-%d") if last_expense else "",
+            "Sotib olingan vaqt": last_expense.item_purchased_date.strftime("%H:%M:%S") if last_expense else "",
+            "Umumiy sotib olingan summasi": [total_income]
+        })
 
-    df = pd.concat([df, empty_row, total_income_row], ignore_index=True)
+        df = pd.concat([df, empty_row, total_income_row], ignore_index=True)
 
-    file_path = "expense_report.xlsx"
-    df.to_excel(file_path, index=False)  # Excel fayl sifatida saqlaymiz
+        file_path = "expense_report.xlsx"
+        df.to_excel(file_path, index=False)  # Excel fayl sifatida saqlaymiz
 
-    return FileResponse(file_path,
-                        filename="expense_report.xlsx",
-                        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        return FileResponse(file_path,
+                            filename="expense_report.xlsx",
+                            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+    else:
+        raise HTTPException(status_code=401, detail="Noto'g'ri token yoki foydalanuvchi ro'yxatdan o'tmagan")
 
 
 # -----------------------------------------------------
 
 
-def items_to_excel(db):
-    try:
-        items = db.query(Item).all()  # Barcha mahsulotlarni olish
+def items_to_excel(token: str, db):
+    user = verify_token(token, db)
+    if user:
+        try:
+            items = db.query(Item).all()  # Barcha mahsulotlarni olish
 
-        # Ma'lumotlarni DataFrame ga o'tkazamiz
-        data = [{
-            "ID": item.id,
-            "Kategoriya": (
-                item.item_category.category_name_uz
-                if item.item_category and detect_language(item.item_category.category_name_uz) == "uz"
-                else item.item_category.category_name_ru if item.item_category
-                else "Noma'lum"
-            ),
-            "Brend": item.item_brand.brand_name if item.item_brand else "Noma'lum",
-            "Model": item.item_model.model_name if item.item_model else "Noma'lum",
-            "Sotib olingan narxi": item.item_purchased_price,
-            "Sotib olingan valyuta": item.purchased_currency.name if item.purchased_currency else "Noma'lum",
-            "Sotilgan narxi": item.item_sold_price,
-            "Sotilgan valyuta": item.sold_currency.name if item.sold_currency else "Noma'lum"
-        } for item in items]
+            # Ma'lumotlarni DataFrame ga o'tkazamiz
+            data = [{
+                "ID": item.id,
+                "Kategoriya": (
+                    item.item_category.category_name_uz
+                    if item.item_category and detect_language(item.item_category.category_name_uz) == "uz"
+                    else item.item_category.category_name_ru if item.item_category
+                    else "Noma'lum"
+                ),
+                "Brend": item.item_brand.brand_name if item.item_brand else "Noma'lum",
+                "Model": item.item_model.model_name if item.item_model else "Noma'lum",
+                "Sotib olingan narxi": item.item_purchased_price,
+                "Sotib olingan valyuta": item.purchased_currency.name if item.purchased_currency else "Noma'lum",
+                "Sotilgan narxi": item.item_sold_price,
+                "Sotilgan valyuta": item.sold_currency.name if item.sold_currency else "Noma'lum"
+            } for item in items]
 
-        df = pd.DataFrame(data)
+            df = pd.DataFrame(data)
 
-        file_path = "hisobot.xlsx"
-        df.to_excel(file_path, index=False)
+            file_path = "hisobot.xlsx"
+            df.to_excel(file_path, index=False)
 
-        return FileResponse(file_path,
-                            filename="hisobot.xlsx",
-                            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            return FileResponse(file_path,
+                                filename="hisobot.xlsx",
+                                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    except Exception as e:
-        return {"error": f"Excelga saqlashda xatolik: {str(e)}"}
+        except Exception as e:
+            return {"error": f"Excelga saqlashda xatolik: {str(e)}"}
+    else:
+        raise HTTPException(status_code=401, detail="Noto'g'ri token yoki foydalanuvchi ro'yxatdan o'tmagan")
 
 
 # - - - - - - - - PDF faylga eksport qilish - - - - - - - -
 
-def generate_pdf_income_report(report_data, pdf_filename):
-    pdf = SimpleDocTemplate(pdf_filename, pagesize=letter)
-    elements = []
+def generate_pdf_income_report(db: Session,
+                               report_data,
+                               pdf_filename,
+                               token: str):
+    user = verify_token(token, db)
+    if user:
+        pdf = SimpleDocTemplate(pdf_filename, pagesize=letter)
+        elements = []
 
-    headers = ["Brand", "Model", "Sotilgan miqdori", "Sotilgan summasi", "Sotilgan valyutasi",
-               "Foyda", "Sotilgan sana", "Sotilgan vaqt", "Umumiy sotilgan summa"]
+        headers = ["Brand", "Model", "Sotilgan miqdori", "Sotilgan summasi", "Sotilgan valyutasi",
+                   "Foyda", "Sotilgan sana", "Sotilgan vaqt", "Umumiy sotilgan summa"]
 
-    data = [headers] + [
-        [
-            item["Brand"],
-            item["Model"],
-            item["Sotilgan miqdori"],
-            f"{item['Sotilgan summasi']:,.2f}",
-            str(item["Sotilgan valyutasi"]).split(".")[-1],  # Valyutani oddiy satrga o‘giramiz
-            f"{item['Tovardan qolgan foyda']:,.2f}",
-            item["Sotilgan Sanasi"].replace("Sana: ", "").split(",")[0],
-            # "Sana:" olib tashlanadi va faqat sana olinadi
-            item["Sotilgan Sanasi"].split(", ")[1] if ", " in item["Sotilgan Sanasi"] else "-",
-            # Vaqtni olish yoki "-" qo‘yish
-            f"{item['Umumiy sotilgan summasi']:,.2f}"
+        data = [headers] + [
+            [
+                item["Brand"],
+                item["Model"],
+                item["Sotilgan miqdori"],
+                f"{item['Sotilgan summasi']:,.2f}",
+                str(item["Sotilgan valyutasi"]).split(".")[-1],  # Valyutani oddiy satrga o‘giramiz
+                f"{item['Tovardan qolgan foyda']:,.2f}",
+                item["Sotilgan Sanasi"].replace("Sana: ", "").split(",")[0],
+                # "Sana:" olib tashlanadi va faqat sana olinadi
+                item["Sotilgan Sanasi"].split(", ")[1] if ", " in item["Sotilgan Sanasi"] else "-",
+                # Vaqtni olish yoki "-" qo‘yish
+                f"{item['Umumiy sotilgan summasi']:,.2f}"
+            ]
+            for item in report_data["Mahsulot ma'lumotlari"]
         ]
-        for item in report_data["Mahsulot ma'lumotlari"]
-    ]
 
-    col_widths = [60, 60, 40, 70, 50, 70, 70, 50, 80]  # Har bir ustun uchun kenglik
+        col_widths = [60, 60, 40, 70, 50, 70, 70, 50, 80]  # Har bir ustun uchun kenglik
 
-    jami_tushum = report_data["Oraliqdagi umumiy tushum"]
-    data.append([""] * 7 + ["Jami tushum", f"{jami_tushum}"])
-    print(f"data.get('Oraliqdagi umumiy tushum'): {jami_tushum}")
-    print(f"data: {data}")
+        jami_tushum = report_data["Oraliqdagi umumiy tushum"]
+        data.append([""] * 7 + ["Jami tushum", f"{jami_tushum}"])
+        print(f"data.get('Oraliqdagi umumiy tushum'): {jami_tushum}")
+        print(f"data: {data}")
 
-    table = Table(data, colWidths=col_widths)
+        table = Table(data, colWidths=col_widths)
 
-    style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 7),  # Matnni kichikroq qilish
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-        ('WORDWRAP', (0, 0), (-1, -1))  # Matnni sig‘dirish
-    ])
+        style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 7),  # Matnni kichikroq qilish
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+            ('WORDWRAP', (0, 0), (-1, -1))  # Matnni sig‘dirish
+        ])
 
-    table.setStyle(style)
-    elements.append(table)
+        table.setStyle(style)
+        elements.append(table)
 
-    pdf.build(elements)
+        pdf.build(elements)
+
+        return {"message": f"PDF muvaffaqiyatli yaratildi, filename: {pdf_filename}"}
+
+    else:
+        raise HTTPException(status_code=401, detail="Noto'g'ri token yoki foydalanuvchi ro'yxatdan o'tmagan")
 
 
 # def download_income_report(period: Optional[str] = None, period_date: Optional[str] = None,
@@ -269,52 +304,61 @@ def generate_pdf_income_report(report_data, pdf_filename):
 #     elements.append(table)
 #     pdf.build(elements)
 
-def generate_expense_pdf_report(report_data, pdf_filename):
-    pdf = SimpleDocTemplate(pdf_filename, pagesize=letter)
-    elements = []
+def generate_expense_pdf_report(db: Session,
+                                report_data,
+                                pdf_filename,
+                                token: str):
+    user = verify_token(token, db)
+    if user:
+        pdf = SimpleDocTemplate(pdf_filename, pagesize=letter)
+        elements = []
 
-    headers = ["Brand", "Model", "Miqdori", "Summasi", "Valyutasi", "Sana", "Vaqt", "Umumiy summa", "Jami xarajat"]
+        headers = ["Brand", "Model", "Miqdori", "Summasi", "Valyutasi", "Sana", "Vaqt", "Umumiy summa", "Jami xarajat"]
 
-    data = [headers] + [
-        [
-            item["Brand"],
-            item["Model"],
-            item["Sotib olingan miqdori"],
-            f"{item['Sotib olingan summasi']:,.2f}",
-            str(item["Sotib olingan valyutasi"]).split(".")[-1],  # Valyutani oddiy satrga o‘giramiz
-            item["Sotib olingan sana"],
-            item["Sotib olingan vaqt"],
-            f"{item['Umumiy sotib olingan summasi']:,.2f}",
-            report_data["Tanlangan valyuta"]
+        data = [headers] + [
+            [
+                item["Brand"],
+                item["Model"],
+                item["Sotib olingan miqdori"],
+                f"{item['Sotib olingan summasi']:,.2f}",
+                str(item["Sotib olingan valyutasi"]).split(".")[-1],  # Valyutani oddiy satrga o‘giramiz
+                item["Sotib olingan sana"],
+                item["Sotib olingan vaqt"],
+                f"{item['Umumiy sotib olingan summasi']:,.2f}",
+                report_data["Tanlangan valyuta"]
+            ]
+            for item in report_data["Mahsulot ma'lumotlari"]
         ]
-        for item in report_data["Mahsulot ma'lumotlari"]
-    ]
 
-    col_widths = [70, 70, 40, 70, 50, 70, 70, 70, 70]  # Har bir ustun uchun kenglik
+        col_widths = [70, 70, 40, 70, 50, 70, 70, 70, 70]  # Har bir ustun uchun kenglik
 
-    jami_xarajat = report_data["Oraliqdagi umumiy xarajat"]
-    data.append([""] * 7 + [jami_xarajat, report_data["Tanlangan valyuta"]])
-    # print(f"data.get('Oraliqdaga
+        jami_xarajat = report_data["Oraliqdagi umumiy xarajat"]
+        data.append([""] * 7 + [jami_xarajat, report_data["Tanlangan valyuta"]])
+        # print(f"data.get('Oraliqdaga
 
-    table = Table(data, colWidths=col_widths)
+        table = Table(data, colWidths=col_widths)
 
-    style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 7),  # Matnni kichikroq qilish
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-        ('WORDWRAP', (0, 0), (-1, -1))  # Matnni sig‘dirish
-    ])
+        style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 7),  # Matnni kichikroq qilish
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+            ('WORDWRAP', (0, 0), (-1, -1))  # Matnni sig‘dirish
+        ])
 
-    table.setStyle(style)
-    elements.append(table)
+        table.setStyle(style)
+        elements.append(table)
 
-    pdf.build(elements)
+        pdf.build(elements)
 
+        return {"message": f"PDF muvaffaqiyatli yaratildi, filename: {pdf_filename}"}
+
+    else:
+        raise HTTPException(status_code=401, detail="Noto'g'ri token yoki foydalanuvchi ro'yxatdan o'tmagan")
 
 # def generate_expense_pdf_report(db: Session,
 #                                 period: Optional[str] = None,

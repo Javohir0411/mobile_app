@@ -29,13 +29,13 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     if not db_user or not verify_password(user.password, db_user.user_password):
         raise HTTPException(status_code=401, detail="Noto'g'ri username yoki password kiritildi!")
 
-    logger.info("User Password:", user.password)
-    logger.info("DB Password:", db_user.user_password)
-    logger.info("Verify Result:", verify_password(user.password, db_user.user_password))
+    logger.info("User Password: %s", user.password)
+    logger.info("DB Password: %s", db_user.user_password)
+    logger.info("Verify Result: %s", verify_password(user.password, db_user.user_password))
 
     # JWT token yaratish
     access_token = create_access_token(
-        data={"sub": db_user.user_email},
+        data={"sub": db_user.user_email, "user_id": db_user.id, "is_registered": True},
         expire_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     # return {"access_token": access_token, "token_type": "bearer"}

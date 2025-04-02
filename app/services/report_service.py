@@ -2,7 +2,6 @@ from app.db.models import Item, Brand, Model
 from fastapi.responses import FileResponse
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
-from http.client import HTTPException
 from sqlalchemy.orm import joinedload
 from collections import defaultdict
 from sqlalchemy.orm import Session
@@ -21,7 +20,6 @@ def get_exchange_rates():
         rates = {"uzs": 1}
         for item in data:
             rates[item["Ccy"].lower()] = float(item["Rate"])
-        print(f"rates: {rates}")
         return rates
 
     except Exception as e:
@@ -245,6 +243,8 @@ def get_expense_report(db: Session, period: Optional[str] = None,
     return result
 
 
+# - - - - - - - - - Omborxonadagi sotilmagan mahsulotlar - - - - - - - - -
+
 def get_stock_with_value(db: Session):
     result = db.query(
         Item.item_brand_id,
@@ -289,3 +289,102 @@ def get_stock_with_value(db: Session):
         }
         for row in result
     ]
+
+
+# - - - - - - Oraliqdagi umumiy tushum va eng ko'p sotilgan mahsulotlarni olish - - - - - -
+
+def get_statistics(db: Session,
+                   period: Optional[str] = None,
+                   start_date: Optional[str] = None,
+                   end_date: Optional[str] = None,
+                   rate: Optional[float] = None,
+                   convert_to: str = "uzs",
+                   lang: str = "uz"):
+    today = datetime.now()
+
+    if period:
+        if period == "daily":
+            start_date = today.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = today
+        elif period == "weekly":
+            start_date = today - timedelta(days=7)
+            end_date = today
+        elif period == "monthly":
+            start_date = today - timedelta(days=30)
+            end_date = today
+        else:
+            return {"error": "Invalid period. Choose from: daily, weekly, monthly"}
+    elif start_date and end_date:
+        try:
+            start_date = datetime.strptime(start_date, "%Y-%m-%d")
+            end_date = datetime.strptime(end_date, "%Y-%m-%d")
+        except ValueError:
+            return {"error": "Invalid date format. Use YYYY-MM-DD"}
+    else:
+        return {"error": "You must provide either 'period' or 'start_date' and 'end_date'"}
+
+    sales = db.query(Item).filter(
+        Item.item_sold_date >= start_date,
+        Item.item_sold_date <= end_date,
+        Item.item_is_sold == True
+    ).options(
+        joinedload(Item.item_brand),
+        joinedload(Item.item_model),
+        joinedload(Item.item_category)
+    ).all()
+
+    exchange_rates = get_exchange_rates()
+
+    sales_by_currency = defaultdict(int)
+    sales_by_product = defaultdict(int)
+
+    for sale in sales:
+        # Sotilgan valyutani hisoblash
+        sales_by_currency[sale.sold_currency] += sale.item_sold_price * sale.item_sold_quantity
+
+        # Mahsulot bo'yicha sotuvlar
+        product_key = (sale.item_brand.brand_name, sale.item_model.model_name)
+        sales_by_product[product_key] += sale.item_sold_quantity * sale.item_sold_price
+
+
+    # Barcha summani convert to valyutaga o'tkazish
+    if convert_to not in exchange_rates:
+        return {"error": "Invalid currency. Choose from: uzs, usd"}
+
+    if convert_to == "usd" and rate is None:
+        total_sales_converted = sum(
+            amount * exchange_rates[currency] / exchange_rates[convert_to]
+            for currency, amount in sales_by_currency.items()
+        )
+    elif convert_to == "usd" and rate:
+        total_sales_converted = sum(
+            amount * exchange_rates[currency] / rate
+            for currency, amount in sales_by_currency.items()
+        )
+    else:
+        total_sales_converted = sum(
+            amount * exchange_rates[currency] / exchange_rates[convert_to]
+            for currency, amount in sales_by_currency.items()
+        )
+
+    # Eng ko'p sotilgan mahsulotni topish
+    best_selling_product = max(sales_by_product, key=sales_by_product.get)
+
+    # Eng ko'p sotilgan mahsulot bo'yicha umumiy summani hisoblash
+    best_selling_total = sales_by_product[best_selling_product]
+
+    result = {
+        "Oraliq": period if period else f"{start_date.date()} - {end_date.date()}",
+        "Boshlang'ich sana": start_date.isoformat(),
+        "Tugash sanasi": end_date.isoformat(),
+        "Umumiy daromad": round(total_sales_converted, 2),
+        "Tanlangan valyuta": convert_to.upper(),
+        "Eng ko'p sotilgan mahsulot": {
+            "Brend": best_selling_product[0],
+            "Model": best_selling_product[1],
+            "Sotilgan miqdori": sales_by_product[best_selling_product] / best_selling_total if best_selling_total > 0 else 0,
+            "Umumiy summasi": best_selling_total
+        }
+    }
+    print(f"Tanlangan til: {lang}")
+    return result
